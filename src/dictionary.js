@@ -12,7 +12,7 @@ export const ALL_CATEGORIES = [
   "Greetings", "Emotions", "Relationships", "Family", "Food", "Daily Life",
   "Time", "Nature", "Travel", "Body", "Work", "School", "Objects", "Places",
   "Animals", "Weather", "Religion", "Money", "Health", "Clothing", "Colors",
-  "Numbers", "Movement", "Speech", "Violence", "News & Media", "Insults", "Government & Politics",
+  "Numbers", "Movement", "Speech", "Violence", "News & Media", "Government & Politics", "Insults",
 ];
 
 export const CATEGORY_PALETTE = [

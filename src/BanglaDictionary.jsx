@@ -1,3 +1,36 @@
+const DEFAULT_WORDS = [
+  {"romanized":"Ahoto","english":"injured","partOfSpeech":"adjective","example":"","id":1773179083805,"categories":["Body","Health"]},
+  {"romanized":"Nihoto","english":"killed","partOfSpeech":"adjective","example":"","id":1773179256088,"categories":["Body","Violence"]},
+  {"romanized":"Ostro","english":"weapon","partOfSpeech":"noun","example":"","id":1773179278104,"categories":["Objects","Violence"]},
+  {"romanized":"Apadomostok","english":"head to toe","partOfSpeech":"adjective","example":"","id":1773179301187,"categories":["Body"]},
+  {"romanized":"Otit","english":"past","partOfSpeech":"adverb","example":"","id":1773179320689,"categories":["Time"]},
+  {"romanized":"Bhobisshot","english":"future","partOfSpeech":"noun","example":"","id":1773179340787,"categories":["Time"]},
+  {"romanized":"Bortoman","english":"present","partOfSpeech":"adjective","example":"","id":1773179366404,"categories":["Time"]},
+  {"romanized":"Shongbad","english":"news","partOfSpeech":"noun","example":"","id":1773179386854,"categories":["News & Media"]},
+  {"romanized":"Hamla","english":"attack","partOfSpeech":"noun","example":"","id":1773179532974,"categories":["Violence"]},
+  {"romanized":"Shorkar","english":"government","partOfSpeech":"noun","example":"","id":1773182562699,"categories":["Government & Politics"]},
+  {"romanized":"Jatiyo","english":"national","partOfSpeech":"adjective","example":"","id":1773182605531,"categories":["Government & Politics"]},
+  {"romanized":"Rashtro","english":"state","partOfSpeech":"noun","example":"","id":1773182643681,"categories":["Government & Politics","Places"]},
+  {"romanized":"Jukto","english":"joined/united","partOfSpeech":"adjective","example":"","id":1773182727965,"categories":["Government & Politics"]},
+  {"romanized":"Rajneeti","english":"politics","partOfSpeech":"noun","example":"","id":1773182765880,"categories":["Government & Politics","News & Media"]},
+  {"romanized":"Prodhan Montri","english":"prime minister","partOfSpeech":"noun","example":"","id":1773182806647,"categories":["Government & Politics"]},
+  {"romanized":"Rashtropoti","english":"president","partOfSpeech":"noun","example":"","id":1773182845164,"categories":["Government & Politics"]},
+  {"romanized":"Rajnoitik Dol","english":"political party","partOfSpeech":"noun","example":"","id":1773182886730,"categories":["Government & Politics"]},
+  {"romanized":"Bondhutto","english":"friendship","partOfSpeech":"noun","example":"","id":1773183027931,"categories":["Relationships"]},
+  {"romanized":"Gurutto","english":"importance","partOfSpeech":"noun","example":"","id":1773184995910,"categories":["Daily Life"]},
+  {"romanized":"Shima","english":"limit","partOfSpeech":"noun","example":"","id":1773185168109,"categories":["Daily Life"]},
+  {"romanized":"Shimana","english":"boundary","partOfSpeech":"noun","example":"","id":1773185232508,"categories":["Daily Life"]},
+  {"romanized":"Rakkhosh","english":"monster/demon/ogre","partOfSpeech":"noun","example":"","id":1773185333476,"categories":["Insults"]},
+  {"romanized":"Petni","english":"witch/hag","partOfSpeech":"noun","example":"","id":1773185361325,"categories":["Insults"]},
+  {"romanized":"Daini","english":"witch","partOfSpeech":"noun","example":"","id":1773185383375,"categories":["Insults"]},
+  {"romanized":"Atta","english":"soul","partOfSpeech":"noun","example":"","id":1773185402424,"categories":["Body","Religion"]},
+  {"romanized":"Boshobash","english":"inhabit/live","partOfSpeech":"verb","example":"","id":1773185434479,"categories":["Daily Life"]},
+  {"romanized":"Bhoutik","english":"haunted / to do with ghosts","partOfSpeech":"adjective","example":"","id":1773185461791,"categories":["Daily Life"]},
+  {"romanized":"Atto","english":"self","partOfSpeech":"pronoun","example":"","id":1773185541508,"categories":["Relationships"]},
+  {"romanized":"Attohotta","english":"suicide","partOfSpeech":"noun","example":"","id":1773186152873,"categories":["Violence","Body"]},
+  {"romanized":"Shontrashi","english":"terrorist","partOfSpeech":"noun","example":"","id":1773186197874,"categories":["Violence","News & Media"]}
+];
+
 import { useState, useMemo, useEffect, useRef } from "react";
 import "./dictionary.css";
 import {
@@ -96,7 +129,7 @@ function CategoryPicker({ selected, onChange }) {
 
 export default function BanglaDictionary() {
   const [words, setWords] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("bd_words")) || []; } catch { return []; }
+    try { return JSON.parse(localStorage.getItem("bd_words")) || DEFAULT_WORDS; } catch { return DEFAULT_WORDS; }
   });
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
