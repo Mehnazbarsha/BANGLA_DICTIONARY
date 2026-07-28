@@ -15,13 +15,11 @@ import {
 } from "./dictionary.js";
 import { auth } from "./firebase.js";
 import {
-  signInAnonymously,
-  signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
 
-const ADMIN_EMAIL = "barshamehnaz@gmail.com"; 
+const ADMIN_EMAIL = "barshamehnaz@gmail.com";
 
 // ── CATEGORY TAGS ──────────────────────────────────────────────
 
@@ -113,10 +111,7 @@ export default function BanglaDictionary() {
   const [words, setWords] = useState([]);
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [adminEmail, setAdminEmail] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -137,8 +132,6 @@ export default function BanglaDictionary() {
       if (u) {
         setUser(u);
         setIsAdmin(u.email === ADMIN_EMAIL);
-      } else {
-        signInAnonymously(auth);
       }
     });
     return unsub;
@@ -208,19 +201,10 @@ export default function BanglaDictionary() {
     return isAdmin || word.addedBy === user.uid;
   }
 
-  async function handleAdminLogin() {
-    try {
-      await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-      setShowAdminLogin(false);
-      setLoginError("");
-    } catch (e) {
-      setLoginError("Invalid email or password");
-    }
-  }
-
   async function handleSignOut() {
     await signOut(auth);
     setIsAdmin(false);
+    setShowUserMenu(false);
   }
 
   function saveApiKey() {
@@ -245,24 +229,54 @@ export default function BanglaDictionary() {
       <header className="header">
         <div className="header-inner">
           <div>
-            <div className="header-title">Bangla Dictionary</div>
+            <div className="header-title">Mati</div>
             <div className="header-sub">
-              Collaborative Lexicon · {words.length} {words.length === 1 ? "entry" : "entries"}
+              Bangla Dictionary · {words.length} {words.length === 1 ? "entry" : "entries"}
               {isAdmin && <span style={{ color: "var(--accent-warm)", marginLeft: "0.5rem" }}>· admin</span>}
             </div>
           </div>
           <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
             {!apiKey && (
-              <button className="btn-ghost" onClick={() => setShowApiKey((v) => !v)}>🔑 api key</button>
+              <button className="btn-ghost" onClick={() => setShowApiKey((v) => !v)}>api key</button>
             )}
-            {isAdmin
-              ? <button className="btn-ghost" onClick={handleSignOut}>sign out</button>
-              : <button className="btn-ghost" onClick={() => setShowAdminLogin((v) => !v)}>admin</button>
-            }
             {showForm
               ? <button className="btn-ghost" onClick={closeForm}>✕ cancel</button>
               : <button className="btn-primary" onClick={openForm}>+ new word</button>
             }
+            <div style={{ position: "relative" }}>
+              <div
+                onClick={() => setShowUserMenu((v) => !v)}
+                style={{
+                  width: "32px", height: "32px", borderRadius: "50%",
+                  background: "var(--accent)", color: "var(--bg)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "0.72rem", fontFamily: "var(--mono)",
+                  cursor: "pointer", letterSpacing: "0.05em",
+                  border: "1px solid var(--border)",
+                }}>
+                {user?.email?.[0].toUpperCase() || "?"}
+              </div>
+              {showUserMenu && (
+                <div style={{
+                  position: "absolute", right: 0, top: "calc(100% + 8px)",
+                  background: "var(--bg)", border: "1px solid var(--border)",
+                  borderRadius: "4px", minWidth: "160px", zIndex: 200,
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+                }}>
+                  <div style={{ padding: "0.6rem 0.85rem", fontSize: "0.68rem", color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>
+                    {user?.email}
+                  </div>
+                  <div
+                    onClick={handleSignOut}
+                    style={{ padding: "0.6rem 0.85rem", fontSize: "0.68rem", color: "var(--text-mid)", cursor: "pointer" }}
+                    onMouseEnter={(e) => e.target.style.color = "var(--danger)"}
+                    onMouseLeave={(e) => e.target.style.color = "var(--text-mid)"}
+                  >
+                    Sign out
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -275,22 +289,6 @@ export default function BanglaDictionary() {
                 onKeyDown={(e) => e.key === "Enter" && saveApiKey()}
                 placeholder="gsk_..." style={{ flex: 1 }} />
               <button className="btn-primary" onClick={saveApiKey}>save</button>
-            </div>
-          </div>
-        )}
-
-        {showAdminLogin && !isAdmin && (
-          <div className="header-inner" style={{ marginTop: "0.85rem" }}>
-            <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flex: 1, flexWrap: "wrap" }}>
-              <input className="form-input" type="email" value={adminEmail}
-                onChange={(e) => setAdminEmail(e.target.value)}
-                placeholder="email" style={{ flex: 1 }} />
-              <input className="form-input" type="password" value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
-                placeholder="password" style={{ flex: 1 }} />
-              <button className="btn-primary" onClick={handleAdminLogin}>login</button>
-              {loginError && <span style={{ fontSize: "0.72rem", color: "var(--danger)" }}>{loginError}</span>}
             </div>
           </div>
         )}
