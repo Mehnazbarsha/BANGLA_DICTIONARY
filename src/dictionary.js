@@ -1,3 +1,13 @@
+import { db } from "./firebase";
+import {
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  serverTimestamp,
+} from "firebase/firestore";
+
 // ── CONSTANTS ──────────────────────────────────────────────
 
 export const EMPTY_FORM = {
@@ -69,6 +79,33 @@ export function groupByCategory(words) {
   return g;
 }
 
+// ── FIRESTORE FUNCTIONS ───────────────────────────────────────
+
+export function subscribeToWords(callback) {
+  return onSnapshot(collection(db, "words"), (snapshot) => {
+    const words = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    callback(words);
+  });
+}
+
+export async function addWord(form, user) {
+  await addDoc(collection(db, "words"), {
+    ...form,
+    addedBy: user.uid,
+    addedByName: user.displayName || "Anonymous",
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function deleteWord(id) {
+  await deleteDoc(doc(db, "words", id));
+}
+
+export async function updateWord(id, form) {
+  const { updateDoc } = await import("firebase/firestore");
+  await updateDoc(doc(db, "words", id), { ...form });
+}
+
 // ── AI ENRICH ─────────────────────────────────────────────────
 
 export async function aiEnrich(romanized, english, apiKey) {
@@ -81,28 +118,25 @@ export async function aiEnrich(romanized, english, apiKey) {
     "",
     "Determine the part of speech based on how the Bangla word itself functions, not the English translation.",
     "Rules:",
-    "- Words describing a state, condition, or quality → adjective (e.g. ahoto=injured, shundor=beautiful, nihoto=unharmed)",
-    "- Words that are root action words → verb (e.g. kha=eat, jao=go, bolo=speak)",
-    "- Words naming a person, place, thing, or idea → noun (e.g. bhalobasha=love, ma=mother, khabar=food)",
-    "- Words modifying verbs or adjectives → adverb (e.g. khub=very, jore=quickly)",
-    "- Words replacing nouns → pronoun (e.g. ami=I, tumi=you, shey=he/she)",
-    "- Fixed social phrases → expression (e.g. dhonyobad=thank you)",
+    "- Words describing a state, condition, or quality → adjective",
+    "- Words that are root action words → verb",
+    "- Words naming a person, place, thing, or idea → noun",
+    "- Words modifying verbs or adjectives → adverb",
+    "- Words replacing nouns → pronoun",
+    "- Fixed social phrases → expression",
     "",
     "1. Detect its part of speech. Choose exactly one: noun, verb, adjective, adverb, pronoun, expression, phrase.",
-    "2. Assign 1-3 categories that genuinely apply. You MUST only use categories from the list below — do not invent new ones under any circumstances. If no perfect match exists, pick the closest one.",
-    "   A word can belong to multiple categories if truly relevant (e.g. ahoto=injured → Body + Violence, ostro=weapon → Objects + Violence).",
-    "   Only assign multiple categories if there is a real overlap — do not over-tag.",
-    "   ALLOWED CATEGORIES (use these exact strings only): " + categoryList,
+    "2. Assign 1-3 categories. Only use from this list: " + categoryList,
     "",
-    "Respond ONLY with valid JSON, no markdown, no explanation:",
+    "Respond ONLY with valid JSON, no markdown:",
     "{\"partOfSpeech\": \"...\", \"categories\": [\"...\"]}"
   ].join("\n");
 
-  const res = await fetch("/groq/openai/v1/chat/completions", {
+  const res = await fetch("/api/groq", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": "Bearer " + apiKey,
+      "x-groq-key": apiKey,
     },
     body: JSON.stringify({
       model: "llama-3.1-8b-instant",
@@ -122,7 +156,6 @@ export async function aiEnrich(romanized, english, apiKey) {
   const clean = text.replace(/```json|```/g, "").trim();
   const parsed = JSON.parse(clean);
 
-  // Filter out any categories the AI invented that aren't in the allowed list
   const validCategories = (Array.isArray(parsed.categories) ? parsed.categories : [])
     .filter((c) => ALL_CATEGORIES.includes(c));
 

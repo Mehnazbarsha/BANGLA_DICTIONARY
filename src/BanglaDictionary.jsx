@@ -1,36 +1,3 @@
-const DEFAULT_WORDS = [
-  {"romanized":"Ahoto","english":"injured","partOfSpeech":"adjective","example":"","id":1773179083805,"categories":["Body","Health"]},
-  {"romanized":"Nihoto","english":"killed","partOfSpeech":"adjective","example":"","id":1773179256088,"categories":["Body","Violence"]},
-  {"romanized":"Ostro","english":"weapon","partOfSpeech":"noun","example":"","id":1773179278104,"categories":["Objects","Violence"]},
-  {"romanized":"Apadomostok","english":"head to toe","partOfSpeech":"adjective","example":"","id":1773179301187,"categories":["Body"]},
-  {"romanized":"Otit","english":"past","partOfSpeech":"adverb","example":"","id":1773179320689,"categories":["Time"]},
-  {"romanized":"Bhobisshot","english":"future","partOfSpeech":"noun","example":"","id":1773179340787,"categories":["Time"]},
-  {"romanized":"Bortoman","english":"present","partOfSpeech":"adjective","example":"","id":1773179366404,"categories":["Time"]},
-  {"romanized":"Shongbad","english":"news","partOfSpeech":"noun","example":"","id":1773179386854,"categories":["News & Media"]},
-  {"romanized":"Hamla","english":"attack","partOfSpeech":"noun","example":"","id":1773179532974,"categories":["Violence"]},
-  {"romanized":"Shorkar","english":"government","partOfSpeech":"noun","example":"","id":1773182562699,"categories":["Government & Politics"]},
-  {"romanized":"Jatiyo","english":"national","partOfSpeech":"adjective","example":"","id":1773182605531,"categories":["Government & Politics"]},
-  {"romanized":"Rashtro","english":"state","partOfSpeech":"noun","example":"","id":1773182643681,"categories":["Government & Politics","Places"]},
-  {"romanized":"Jukto","english":"joined/united","partOfSpeech":"adjective","example":"","id":1773182727965,"categories":["Government & Politics"]},
-  {"romanized":"Rajneeti","english":"politics","partOfSpeech":"noun","example":"","id":1773182765880,"categories":["Government & Politics","News & Media"]},
-  {"romanized":"Prodhan Montri","english":"prime minister","partOfSpeech":"noun","example":"","id":1773182806647,"categories":["Government & Politics"]},
-  {"romanized":"Rashtropoti","english":"president","partOfSpeech":"noun","example":"","id":1773182845164,"categories":["Government & Politics"]},
-  {"romanized":"Rajnoitik Dol","english":"political party","partOfSpeech":"noun","example":"","id":1773182886730,"categories":["Government & Politics"]},
-  {"romanized":"Bondhutto","english":"friendship","partOfSpeech":"noun","example":"","id":1773183027931,"categories":["Relationships"]},
-  {"romanized":"Gurutto","english":"importance","partOfSpeech":"noun","example":"","id":1773184995910,"categories":["Daily Life"]},
-  {"romanized":"Shima","english":"limit","partOfSpeech":"noun","example":"","id":1773185168109,"categories":["Daily Life"]},
-  {"romanized":"Shimana","english":"boundary","partOfSpeech":"noun","example":"","id":1773185232508,"categories":["Daily Life"]},
-  {"romanized":"Rakkhosh","english":"monster/demon/ogre","partOfSpeech":"noun","example":"","id":1773185333476,"categories":["Insults"]},
-  {"romanized":"Petni","english":"witch/hag","partOfSpeech":"noun","example":"","id":1773185361325,"categories":["Insults"]},
-  {"romanized":"Daini","english":"witch","partOfSpeech":"noun","example":"","id":1773185383375,"categories":["Insults"]},
-  {"romanized":"Atta","english":"soul","partOfSpeech":"noun","example":"","id":1773185402424,"categories":["Body","Religion"]},
-  {"romanized":"Boshobash","english":"inhabit/live","partOfSpeech":"verb","example":"","id":1773185434479,"categories":["Daily Life"]},
-  {"romanized":"Bhoutik","english":"haunted / to do with ghosts","partOfSpeech":"adjective","example":"","id":1773185461791,"categories":["Daily Life"]},
-  {"romanized":"Atto","english":"self","partOfSpeech":"pronoun","example":"","id":1773185541508,"categories":["Relationships"]},
-  {"romanized":"Attohotta","english":"suicide","partOfSpeech":"noun","example":"","id":1773186152873,"categories":["Violence","Body"]},
-  {"romanized":"Shontrashi","english":"terrorist","partOfSpeech":"noun","example":"","id":1773186197874,"categories":["Violence","News & Media"]}
-];
-
 import { useState, useMemo, useEffect, useRef } from "react";
 import "./dictionary.css";
 import {
@@ -41,7 +8,20 @@ import {
   filterWords,
   groupByCategory,
   aiEnrich,
+  subscribeToWords,
+  addWord,
+  deleteWord,
+  updateWord,
 } from "./dictionary.js";
+import { auth } from "./firebase.js";
+import {
+  signInAnonymously,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
+
+const ADMIN_EMAIL = "barshamehnaz@gmail.com"; 
 
 // ── CATEGORY TAGS ──────────────────────────────────────────────
 
@@ -64,7 +44,7 @@ function CategoryTags({ categories }) {
 
 // ── WORD CARD ──────────────────────────────────────────────────
 
-function WordCard({ word, expanded, onExpand, onEdit, onDelete }) {
+function WordCard({ word, expanded, onExpand, onEdit, onDelete, canDelete }) {
   const firstColor = word.categories && word.categories.length
     ? getCategoryColor(word.categories[0])
     : "#ccc";
@@ -86,7 +66,9 @@ function WordCard({ word, expanded, onExpand, onEdit, onDelete }) {
           {word.example && <div className="card-example">"{word.example}"</div>}
           <div className="card-actions">
             <button className="btn-small" onClick={onEdit}>edit</button>
-            <button className="btn-danger" onClick={onDelete}>delete</button>
+            {canDelete && (
+              <button className="btn-danger" onClick={onDelete}>delete</button>
+            )}
           </div>
         </div>
       )}
@@ -128,9 +110,13 @@ function CategoryPicker({ selected, onChange }) {
 // ── MAIN APP ───────────────────────────────────────────────────
 
 export default function BanglaDictionary() {
-  const [words, setWords] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("bd_words")) || DEFAULT_WORDS; } catch { return DEFAULT_WORDS; }
-  });
+  const [words, setWords] = useState([]);
+  const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -145,15 +131,30 @@ export default function BanglaDictionary() {
   const [tempKey, setTempKey] = useState("");
   const debounceRef = useRef(null);
 
+  // ── AUTH ──
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (u) {
+        setUser(u);
+        setIsAdmin(u.email === ADMIN_EMAIL);
+      } else {
+        signInAnonymously(auth);
+      }
+    });
+    return unsub;
+  }, []);
+
+  // ── FIRESTORE LISTENER ──
+  useEffect(() => {
+    const unsub = subscribeToWords((w) => setWords(w));
+    return unsub;
+  }, []);
+
   const allCategories = useMemo(() => deriveCategories(words), [words]);
   const filtered = useMemo(() => filterWords(words, search, filterCategory), [words, search, filterCategory]);
   const grouped = useMemo(() => groupByCategory(filtered), [filtered]);
 
-  useEffect(() => {
-    localStorage.setItem("bd_words", JSON.stringify(words));
-  }, [words]);
-
-  // Auto-run AI when both fields filled
+  // ── AI AUTO-ENRICH ──
   useEffect(() => {
     if (!form.romanized.trim() || !form.english.trim() || !apiKey) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -181,12 +182,12 @@ export default function BanglaDictionary() {
   function openForm() { setForm(EMPTY_FORM); setEditId(null); setAiStatus(""); setShowForm(true); }
   function closeForm() { setShowForm(false); setEditId(null); setForm(EMPTY_FORM); setAiStatus(""); }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!form.romanized.trim() || !form.english.trim()) return;
     if (editId !== null) {
-      setWords((prev) => prev.map((w) => (w.id === editId ? { ...form, id: editId } : w)));
+      await updateWord(editId, form);
     } else {
-      setWords((prev) => [...prev, { ...form, id: Date.now() }]);
+      await addWord(form, user);
     }
     closeForm();
   }
@@ -197,9 +198,29 @@ export default function BanglaDictionary() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function handleDelete(id) {
-    setWords((prev) => prev.filter((w) => w.id !== id));
+  async function handleDelete(id) {
+    await deleteWord(id);
     if (expandedId === id) setExpandedId(null);
+  }
+
+  function canDelete(word) {
+    if (!user) return false;
+    return isAdmin || word.addedBy === user.uid;
+  }
+
+  async function handleAdminLogin() {
+    try {
+      await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+      setShowAdminLogin(false);
+      setLoginError("");
+    } catch (e) {
+      setLoginError("Invalid email or password");
+    }
+  }
+
+  async function handleSignOut() {
+    await signOut(auth);
+    setIsAdmin(false);
   }
 
   function saveApiKey() {
@@ -225,18 +246,26 @@ export default function BanglaDictionary() {
         <div className="header-inner">
           <div>
             <div className="header-title">Bangla Dictionary</div>
-            <div className="header-sub">Personal Lexicon · {words.length} {words.length === 1 ? "entry" : "entries"}</div>
+            <div className="header-sub">
+              Collaborative Lexicon · {words.length} {words.length === 1 ? "entry" : "entries"}
+              {isAdmin && <span style={{ color: "var(--accent-warm)", marginLeft: "0.5rem" }}>· admin</span>}
+            </div>
           </div>
           <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
             {!apiKey && (
               <button className="btn-ghost" onClick={() => setShowApiKey((v) => !v)}>🔑 api key</button>
             )}
+            {isAdmin
+              ? <button className="btn-ghost" onClick={handleSignOut}>sign out</button>
+              : <button className="btn-ghost" onClick={() => setShowAdminLogin((v) => !v)}>admin</button>
+            }
             {showForm
               ? <button className="btn-ghost" onClick={closeForm}>✕ cancel</button>
               : <button className="btn-primary" onClick={openForm}>+ new word</button>
             }
           </div>
         </div>
+
         {showApiKey && !apiKey && (
           <div className="header-inner" style={{ marginTop: "0.85rem" }}>
             <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flex: 1 }}>
@@ -249,10 +278,25 @@ export default function BanglaDictionary() {
             </div>
           </div>
         )}
+
+        {showAdminLogin && !isAdmin && (
+          <div className="header-inner" style={{ marginTop: "0.85rem" }}>
+            <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flex: 1, flexWrap: "wrap" }}>
+              <input className="form-input" type="email" value={adminEmail}
+                onChange={(e) => setAdminEmail(e.target.value)}
+                placeholder="email" style={{ flex: 1 }} />
+              <input className="form-input" type="password" value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
+                placeholder="password" style={{ flex: 1 }} />
+              <button className="btn-primary" onClick={handleAdminLogin}>login</button>
+              {loginError && <span style={{ fontSize: "0.72rem", color: "var(--danger)" }}>{loginError}</span>}
+            </div>
+          </div>
+        )}
       </header>
 
       <main className="main">
-
         {showForm && (
           <div className="form-panel">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.5rem" }}>
@@ -271,7 +315,7 @@ export default function BanglaDictionary() {
             </div>
 
             <div style={{ marginBottom: "1rem" }}>
-              <label className="form-label">Example sentence (romanized Bangla only)</label>
+              <label className="form-label">Example sentence</label>
               <input className="form-input" value={form.example}
                 onChange={(e) => setForm((f) => ({ ...f, example: e.target.value }))}
                 placeholder="Write your own example..." />
@@ -319,7 +363,9 @@ export default function BanglaDictionary() {
               <WordCard key={w.id} word={w}
                 expanded={expandedId === w.id}
                 onExpand={() => setExpandedId(expandedId === w.id ? null : w.id)}
-                onEdit={() => handleEdit(w)} onDelete={() => handleDelete(w.id)} />
+                onEdit={() => handleEdit(w)}
+                onDelete={() => handleDelete(w.id)}
+                canDelete={canDelete(w)} />
             ))}
           </div>
         )}
@@ -340,7 +386,9 @@ export default function BanglaDictionary() {
                   <span className="list-pos">{w.partOfSpeech || "—"}</span>
                   <div style={{ display: "flex", gap: "0.4rem" }} onClick={(e) => e.stopPropagation()}>
                     <button className="btn-small" onClick={() => handleEdit(w)}>edit</button>
-                    <button className="btn-danger" onClick={() => handleDelete(w.id)}>del</button>
+                    {canDelete(w) && (
+                      <button className="btn-danger" onClick={() => handleDelete(w.id)}>del</button>
+                    )}
                   </div>
                 </div>
                 {expandedId === w.id && w.example && (
@@ -370,7 +418,9 @@ export default function BanglaDictionary() {
                       <WordCard key={w.id} word={w}
                         expanded={expandedId === w.id}
                         onExpand={() => setExpandedId(expandedId === w.id ? null : w.id)}
-                        onEdit={() => handleEdit(w)} onDelete={() => handleDelete(w.id)} />
+                        onEdit={() => handleEdit(w)}
+                        onDelete={() => handleDelete(w.id)}
+                        canDelete={canDelete(w)} />
                     ))}
                   </div>
                 </div>
