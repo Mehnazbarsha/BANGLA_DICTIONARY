@@ -108,9 +108,8 @@ export async function updateWord(id, form) {
 
 // ── AI ENRICH ─────────────────────────────────────────────────
 
-export async function aiEnrich(romanized, english, apiKey) {
+export async function aiEnrich(romanized, english) {
   const categoryList = ALL_CATEGORIES.join(", ");
-
   const prompt = [
     "You are a Bengali linguistics expert. Analyze this Bangla word written in Roman script.",
     "Word: \"" + romanized + "\"",
@@ -133,11 +132,10 @@ export async function aiEnrich(romanized, english, apiKey) {
   ].join("\n");
 
   const res = await fetch("/api/groq", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-groq-key": apiKey,
-    },
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
     body: JSON.stringify({
       model: "llama-3.1-8b-instant",
       max_tokens: 200,

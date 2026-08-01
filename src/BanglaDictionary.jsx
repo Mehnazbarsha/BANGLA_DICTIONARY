@@ -121,9 +121,6 @@ export default function BanglaDictionary() {
   const [expandedId, setExpandedId] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState("");
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("bd_apikey") || "");
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [tempKey, setTempKey] = useState("");
   const debounceRef = useRef(null);
 
   // ── AUTH ──
@@ -149,13 +146,13 @@ export default function BanglaDictionary() {
 
   // ── AI AUTO-ENRICH ──
   useEffect(() => {
-    if (!form.romanized.trim() || !form.english.trim() || !apiKey) return;
+    if (!form.romanized.trim() || !form.english.trim()) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setAiLoading(true);
       setAiStatus("loading");
       try {
-        const result = await aiEnrich(form.romanized, form.english, apiKey);
+        const result = await aiEnrich(form.romanized, form.english);
         setForm((f) => ({
           ...f,
           partOfSpeech: result.partOfSpeech || f.partOfSpeech,
@@ -170,7 +167,7 @@ export default function BanglaDictionary() {
       setTimeout(() => setAiStatus(""), 3000);
     }, 900);
     return () => clearTimeout(debounceRef.current);
-  }, [form.romanized, form.english, apiKey]);
+  }, [form.romanized, form.english]);
 
   function openForm() { setForm(EMPTY_FORM); setEditId(null); setAiStatus(""); setShowForm(true); }
   function closeForm() { setShowForm(false); setEditId(null); setForm(EMPTY_FORM); setAiStatus(""); }
@@ -207,12 +204,6 @@ export default function BanglaDictionary() {
     setShowUserMenu(false);
   }
 
-  function saveApiKey() {
-    setApiKey(tempKey.trim());
-    localStorage.setItem("bd_apikey", tempKey.trim());
-    setShowApiKey(false); setTempKey("");
-  }
-
   function field(key, label, placeholder) {
     return (
       <div>
@@ -236,9 +227,6 @@ export default function BanglaDictionary() {
             </div>
           </div>
           <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
-            {!apiKey && (
-              <button className="btn-ghost" onClick={() => setShowApiKey((v) => !v)}>api key</button>
-            )}
             {showForm
               ? <button className="btn-ghost" onClick={closeForm}>✕ cancel</button>
               : <button className="btn-primary" onClick={openForm}>+ new word</button>
@@ -266,32 +254,24 @@ export default function BanglaDictionary() {
                   <div style={{ padding: "0.6rem 0.85rem", fontSize: "0.68rem", color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>
                     {user?.email}
                   </div>
+                  {isAdmin && (
+                    <div style={{ padding: "0.6rem 0.85rem", fontSize: "0.68rem", color: "var(--accent-warm)" }}>
+                      admin
+                    </div>
+                  )}
                   <div
                     onClick={handleSignOut}
                     style={{ padding: "0.6rem 0.85rem", fontSize: "0.68rem", color: "var(--text-mid)", cursor: "pointer" }}
                     onMouseEnter={(e) => e.target.style.color = "var(--danger)"}
                     onMouseLeave={(e) => e.target.style.color = "var(--text-mid)"}
                   >
-                    Sign out
+                    sign out
                   </div>
                 </div>
               )}
             </div>
           </div>
         </div>
-
-        {showApiKey && !apiKey && (
-          <div className="header-inner" style={{ marginTop: "0.85rem" }}>
-            <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flex: 1 }}>
-              <label className="form-label" style={{ marginBottom: 0, whiteSpace: "nowrap" }}>Groq API Key</label>
-              <input className="form-input" type="password" value={tempKey}
-                onChange={(e) => setTempKey(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && saveApiKey()}
-                placeholder="gsk_..." style={{ flex: 1 }} />
-              <button className="btn-primary" onClick={saveApiKey}>save</button>
-            </div>
-          </div>
-        )}
       </header>
 
       <main className="main">
