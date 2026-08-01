@@ -3,12 +3,12 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCQk-ES0ewYh5oYY-IdVB_HV6X3-NA0bBU",
-  authDomain: "bangla-dict.firebaseapp.com",
-  projectId: "bangla-dict",
-  storageBucket: "bangla-dict.firebasestorage.app",
-  messagingSenderId: "460256862718",
-  appId: "1:460256862718:web:78e119e4318e2744e860af",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
