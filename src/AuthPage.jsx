@@ -92,12 +92,12 @@ export default function AuthPage() {
             letterSpacing: "0.18em",
             color: "var(--text-muted)",
             marginBottom: "1.25rem",
-          }}>মাটি · dirt, soil</div>
+          }}>মাটি</div>
           <p style={{ fontSize: "13px", color: "var(--text-mid)", lineHeight: 1.7, margin: 0 }}>
-            hello, welcome to mati.
+            Hello, welcome to Mati
           </p>
           <p style={{ fontSize: "13px", color: "var(--text-mid)", lineHeight: 1.7, margin: "0.75rem 0 0" }}>
-            a space to unearth for those who know the language but want to feel it at its roots.
+            A space to unearth for those who know the language but want to feel it at its roots
           </p>
         </div>
 
@@ -155,7 +155,7 @@ export default function AuthPage() {
         <div style={{ textAlign: "center" }}>
           {mode === "signin" ? (
             <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-              don't have an account?{" "}
+              Don't have an account?{" "}
               <span
                 onClick={() => { setMode("signup"); setError(""); }}
                 style={{ color: "var(--text-mid)", textDecoration: "underline", cursor: "pointer" }}>
@@ -164,7 +164,7 @@ export default function AuthPage() {
             </span>
           ) : (
             <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-              already have an account?{" "}
+              Already have an account?{" "}
               <span
                 onClick={() => { setMode("signin"); setError(""); }}
                 style={{ color: "var(--text-mid)", textDecoration: "underline", cursor: "pointer" }}>

@@ -19,7 +19,7 @@ export const EMPTY_FORM = {
 };
 
 export const ALL_CATEGORIES = [
-  "Greetings", "Emotions", "Relationships", "Family", "Food", "Daily Life",
+  "Greetings", "Emotions", "Relationships", "Family", "Daily Life",
   "Time", "Nature", "Travel", "Body", "Work", "School", "Objects", "Places",
   "Animals", "Weather", "Religion", "Money", "Food", "Health", "Clothing", "Colors",
   "Numbers", "Movement", "Speech", "Violence", "News & Media", "Government & Politics", "Insults",
