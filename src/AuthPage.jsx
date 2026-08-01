@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { auth } from "./firebase.js";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
 } from "firebase/auth";
 
@@ -15,6 +17,10 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    getRedirectResult(auth).catch(() => {});
+  }, []);
 
   async function handleEmail() {
     if (!email || !password) return;
@@ -35,7 +41,12 @@ export default function AuthPage() {
   async function handleGoogle() {
     setError("");
     try {
-      await signInWithPopup(auth, provider);
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        await signInWithRedirect(auth, provider);
+      } else {
+        await signInWithPopup(auth, provider);
+      }
     } catch (e) {
       setError(e.message.replace("Firebase: ", "").replace(/\(auth.*\)/, "").trim());
     }
@@ -75,19 +86,19 @@ export default function AuthPage() {
             fontWeight: 400,
             letterSpacing: "0.04em",
             marginBottom: "0.4rem",
-          }}>Mati</div>
+          }}>mati</div>
           <div style={{
             fontSize: "11px",
             letterSpacing: "0.18em",
             color: "var(--text-muted)",
             marginBottom: "1.25rem",
-          }}>মাটি</div>
+          }}>মাটি · dirt, soil</div>
           <p style={{ fontSize: "13px", color: "var(--text-mid)", lineHeight: 1.7, margin: 0 }}>
-            Hello, welcome to Mati!
-            </p>
-            <p style={{ fontSize: "13px", color: "var(--text-mid)", lineHeight: 1.7, margin: "0.75rem 0 0" }}>
-            A space to unearth for those who know the language but want to feel it at its roots
-            </p>
+            hello, welcome to mati.
+          </p>
+          <p style={{ fontSize: "13px", color: "var(--text-mid)", lineHeight: 1.7, margin: "0.75rem 0 0" }}>
+            a space to unearth for those who know the language but want to feel it at its roots.
+          </p>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "1.25rem" }}>
@@ -132,7 +143,7 @@ export default function AuthPage() {
             className="form-input"
           />
 
-          {error && (
+          {error && error.length > 2 && (
             <div style={{ fontSize: "12px", color: "var(--danger)" }}>{error}</div>
           )}
 
@@ -144,7 +155,7 @@ export default function AuthPage() {
         <div style={{ textAlign: "center" }}>
           {mode === "signin" ? (
             <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-              Don't have an account?{" "}
+              don't have an account?{" "}
               <span
                 onClick={() => { setMode("signup"); setError(""); }}
                 style={{ color: "var(--text-mid)", textDecoration: "underline", cursor: "pointer" }}>
@@ -153,7 +164,7 @@ export default function AuthPage() {
             </span>
           ) : (
             <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-              Already have an account?{" "}
+              already have an account?{" "}
               <span
                 onClick={() => { setMode("signin"); setError(""); }}
                 style={{ color: "var(--text-mid)", textDecoration: "underline", cursor: "pointer" }}>
