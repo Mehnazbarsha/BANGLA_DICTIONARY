@@ -1,5 +1,12 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+} from "react";
+
 import "./dictionary.css";
+
 import {
   EMPTY_FORM,
   ALL_CATEGORIES,
@@ -13,26 +20,49 @@ import {
   deleteWord,
   updateWord,
 } from "./dictionary.js";
-import { auth } from "./firebase.js";
+
+import { auth, db } from "./firebase.js";
+
 import {
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
 
+import {
+  doc,
+  setDoc,
+  deleteDoc,
+  collection,
+  onSnapshot,
+} from "firebase/firestore";
+
 const ADMIN_EMAIL = "barshamehnaz@gmail.com";
 
-// ── CATEGORY TAGS ──────────────────────────────────────────────
+// ============================================================
+// CATEGORY TAGS
+// ============================================================
 
 function CategoryTags({ categories }) {
-  if (!categories || categories.length === 0) return null;
+  if (!categories || categories.length === 0) {
+    return null;
+  }
+
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
-      {categories.map((c) => {
-        const tc = getCategoryColor(c);
+    <div className="category-tags">
+      {categories.map((category) => {
+        const color = getCategoryColor(category);
+
         return (
-          <span key={c} className="category-tag"
-            style={{ background: tc + "18", color: tc, border: `1px solid ${tc}40` }}>
-            {c}
+          <span
+            key={category}
+            className="category-tag-colored"
+            style={{
+              backgroundColor: color.tag,
+              color: color.text,
+              borderColor: color.border,
+            }}
+          >
+            {category}
           </span>
         );
       })}
@@ -40,32 +70,124 @@ function CategoryTags({ categories }) {
   );
 }
 
-// ── WORD CARD ──────────────────────────────────────────────────
+// ============================================================
+// WORD CARD
+// ============================================================
 
-function WordCard({ word, expanded, onExpand, onEdit, onDelete, canDelete }) {
-  const firstColor = word.categories && word.categories.length
-    ? getCategoryColor(word.categories[0])
-    : "#ccc";
+function WordCard({
+  word,
+  expanded,
+  onExpand,
+  onEdit,
+  onDelete,
+  canDelete,
+  isBookmarked,
+  onBookmark,
+}) {
+  const category =
+    word.categories && word.categories.length > 0
+      ? word.categories[0]
+      : null;
+
+  const color = getCategoryColor(category);
 
   return (
-    <div className="word-card" onClick={onExpand}>
-      <div className="card-accent-bar" style={{ background: firstColor }} />
-      <div className="card-top">
-        <div className="card-romanized">{word.romanized}</div>
-      </div>
-      <div className="card-english">{word.english}</div>
-      {word.partOfSpeech && <div className="card-pos">{word.partOfSpeech}</div>}
-      <div style={{ marginTop: "0.5rem" }}>
-        <CategoryTags categories={word.categories} />
+    <div
+      className="word-card"
+      onClick={onExpand}
+      style={{
+        backgroundColor: color.bg,
+        borderColor: color.border,
+      }}
+    >
+      <div className="word-card-top">
+        {word.partOfSpeech && (
+          <span
+            className="part-of-speech"
+            style={{
+              backgroundColor: color.tag,
+              color: color.text,
+            }}
+          >
+            {word.partOfSpeech}
+          </span>
+        )}
+
+        <button
+          className="bookmark-button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onBookmark();
+          }}
+          style={{
+            color: color.border,
+          }}
+          aria-label="Bookmark word"
+        >
+          <i
+            className={
+              isBookmarked
+                ? "ti ti-bookmark-filled"
+                : "ti ti-bookmark"
+            }
+          />
+        </button>
       </div>
 
+      <div
+        className="word-romanized"
+        style={{
+          color: color.text,
+        }}
+      >
+        {word.romanized}
+      </div>
+
+      <div
+        className="word-english"
+        style={{
+          color: color.text,
+        }}
+      >
+        {word.english}
+      </div>
+
+      <CategoryTags categories={word.categories} />
+
       {expanded && (
-        <div className="card-expanded" onClick={(e) => e.stopPropagation()}>
-          {word.example && <div className="card-example">"{word.example}"</div>}
-          <div className="card-actions">
-            <button className="btn-small" onClick={onEdit}>edit</button>
+        <div
+          className="word-expanded"
+          onClick={(event) => event.stopPropagation()}
+          style={{
+            borderTopColor: color.border,
+          }}
+        >
+          {word.example && (
+            <div
+              className="word-example"
+              style={{
+                color: color.text,
+              }}
+            >
+              "{word.example}"
+            </div>
+          )}
+
+          <div className="word-actions">
+            <button
+              className="btn-small"
+              onClick={onEdit}
+            >
+              edit
+            </button>
+
             {canDelete && (
-              <button className="btn-danger" onClick={onDelete}>delete</button>
+              <button
+                className="btn-danger"
+                onClick={onDelete}
+              >
+                delete
+              </button>
             )}
           </div>
         </div>
@@ -74,29 +196,54 @@ function WordCard({ word, expanded, onExpand, onEdit, onDelete, canDelete }) {
   );
 }
 
-// ── CATEGORY PICKER ────────────────────────────────────────────
+// ============================================================
+// CATEGORY PICKER
+// ============================================================
 
 function CategoryPicker({ selected, onChange }) {
   return (
-    <div>
-      <label className="form-label">Categories (select all that apply)</label>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.3rem" }}>
-        {ALL_CATEGORIES.map((c) => {
-          const active = selected.includes(c);
-          const tc = getCategoryColor(c);
+    <div className="category-picker-wrapper">
+      <label className="form-label">
+        Categories · select all that apply
+      </label>
+
+      <div className="category-picker">
+        {ALL_CATEGORIES.map((category) => {
+          const active = selected.includes(category);
+          const color = getCategoryColor(category);
+
           return (
-            <button key={c} type="button"
-              onClick={() => onChange(active ? selected.filter((x) => x !== c) : [...selected, c])}
-              style={{
-                background: active ? tc + "22" : "transparent",
-                color: active ? tc : "var(--text-muted)",
-                border: active ? `1px solid ${tc}60` : "1px solid var(--border)",
-                borderRadius: "3px", padding: "0.22rem 0.6rem",
-                fontSize: "0.68rem", letterSpacing: "0.06em",
-                cursor: "pointer", fontFamily: "var(--mono)",
-                transition: "all 0.12s",
-              }}>
-              {c}
+            <button
+              key={category}
+              type="button"
+              className={`category-picker-button ${
+                active ? "selected" : ""
+              }`}
+              onClick={() => {
+                if (active) {
+                  onChange(
+                    selected.filter(
+                      (item) => item !== category
+                    )
+                  );
+                } else {
+                  onChange([
+                    ...selected,
+                    category,
+                  ]);
+                }
+              }}
+              style={
+                active
+                  ? {
+                      backgroundColor: color.bg,
+                      color: color.text,
+                      borderColor: color.border,
+                    }
+                  : undefined
+              }
+            >
+              {category}
             </button>
           );
         })}
@@ -105,168 +252,430 @@ function CategoryPicker({ selected, onChange }) {
   );
 }
 
-// ── MAIN APP ───────────────────────────────────────────────────
+// ============================================================
+// MAIN APP
+// ============================================================
 
 export default function BanglaDictionary() {
   const [words, setWords] = useState([]);
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [bookmarks, setBookmarks] = useState(new Set());
+
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
+
   const [search, setSearch] = useState("");
-  const [filterCategory, setFilterCategory] = useState("All");
+  const [filterCategory, setFilterCategory] =
+    useState("All");
+
   const [view, setView] = useState("grid");
   const [expandedId, setExpandedId] = useState(null);
+
   const [aiLoading, setAiLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState("");
+
   const debounceRef = useRef(null);
 
-  // ── AUTH ──
+  // ==========================================================
+  // AUTH
+  // ==========================================================
+
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (u) {
-        setUser(u);
-        setIsAdmin(u.email === ADMIN_EMAIL);
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (currentUser) => {
+        setUser(currentUser);
+
+        if (currentUser) {
+          setIsAdmin(
+            currentUser.email === ADMIN_EMAIL
+          );
+        } else {
+          setIsAdmin(false);
+        }
       }
+    );
+
+    return unsubscribe;
+  }, []);
+
+  // ==========================================================
+  // FIRESTORE WORDS
+  // ==========================================================
+
+  useEffect(() => {
+    const unsubscribe = subscribeToWords(
+      (newWords) => {
+        setWords(newWords);
+      }
+    );
+
+    return unsubscribe;
+  }, []);
+
+  // ==========================================================
+  // BOOKMARKS
+  // ==========================================================
+
+  useEffect(() => {
+    if (!user) {
+      setBookmarks(new Set());
+      return undefined;
+    }
+
+    const unsubscribe = onSnapshot(
+      collection(
+        db,
+        "users",
+        user.uid,
+        "bookmarks"
+      ),
+      (snapshot) => {
+        setBookmarks(
+          new Set(
+            snapshot.docs.map(
+              (document) => document.id
+            )
+          )
+        );
+      }
+    );
+
+    return unsubscribe;
+  }, [user]);
+
+  async function toggleBookmark(wordId) {
+    if (!user) return;
+
+    const reference = doc(
+      db,
+      "users",
+      user.uid,
+      "bookmarks",
+      wordId
+    );
+
+    if (bookmarks.has(wordId)) {
+      await deleteDoc(reference);
+    } else {
+      await setDoc(reference, {
+        savedAt: new Date(),
+      });
+    }
+  }
+
+  // ==========================================================
+  // FILTERING
+  // ==========================================================
+
+  const allCategories = useMemo(
+    () => deriveCategories(words),
+    [words]
+  );
+
+  const filtered = useMemo(() => {
+    const source =
+      view === "saved"
+        ? words.filter((word) =>
+            bookmarks.has(word.id)
+          )
+        : words;
+
+    return filterWords(
+      source,
+      search,
+      filterCategory
+    );
+  }, [
+    words,
+    search,
+    filterCategory,
+    view,
+    bookmarks,
+  ]);
+
+  const grouped = useMemo(
+    () => groupByCategory(filtered),
+    [filtered]
+  );
+
+  // ==========================================================
+  // AI AUTO ENRICH
+  // ==========================================================
+
+  useEffect(() => {
+    if (
+      !form.romanized.trim() ||
+      !form.english.trim()
+    ) {
+      return undefined;
+    }
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(
+      async () => {
+        setAiLoading(true);
+        setAiStatus("loading");
+
+        try {
+          const result = await aiEnrich(
+            form.romanized,
+            form.english
+          );
+
+          setForm((current) => ({
+            ...current,
+
+            partOfSpeech:
+              result.partOfSpeech ||
+              current.partOfSpeech,
+
+            categories:
+              result.categories &&
+              result.categories.length
+                ? result.categories
+                : current.categories,
+          }));
+
+          setAiStatus("ok");
+        } catch (error) {
+          console.error(
+            "AI enrichment failed:",
+            error
+          );
+
+          setAiStatus("err");
+        }
+
+        setAiLoading(false);
+
+        setTimeout(() => {
+          setAiStatus("");
+        }, 3000);
+      },
+      900
+    );
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [
+    form.romanized,
+    form.english,
+  ]);
+
+  // ==========================================================
+  // FORM
+  // ==========================================================
+
+  function openForm() {
+    setForm({
+      ...EMPTY_FORM,
+      categories: [],
     });
-    return unsub;
-  }, []);
 
-  // ── FIRESTORE LISTENER ──
-  useEffect(() => {
-    const unsub = subscribeToWords((w) => setWords(w));
-    return unsub;
-  }, []);
+    setEditId(null);
+    setAiStatus("");
+    setShowForm(true);
+  }
 
-  const allCategories = useMemo(() => deriveCategories(words), [words]);
-  const filtered = useMemo(() => filterWords(words, search, filterCategory), [words, search, filterCategory]);
-  const grouped = useMemo(() => groupByCategory(filtered), [filtered]);
+  function closeForm() {
+    setShowForm(false);
+    setEditId(null);
 
-  // ── AI AUTO-ENRICH ──
-  useEffect(() => {
-    if (!form.romanized.trim() || !form.english.trim()) return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      setAiLoading(true);
-      setAiStatus("loading");
-      try {
-        const result = await aiEnrich(form.romanized, form.english);
-        setForm((f) => ({
-          ...f,
-          partOfSpeech: result.partOfSpeech || f.partOfSpeech,
-          categories: result.categories.length ? result.categories : f.categories,
-        }));
-        setAiStatus("ok");
-      } catch (e) {
-        console.error(e);
-        setAiStatus("err");
-      }
-      setAiLoading(false);
-      setTimeout(() => setAiStatus(""), 3000);
-    }, 900);
-    return () => clearTimeout(debounceRef.current);
-  }, [form.romanized, form.english]);
+    setForm({
+      ...EMPTY_FORM,
+      categories: [],
+    });
 
-  function openForm() { setForm(EMPTY_FORM); setEditId(null); setAiStatus(""); setShowForm(true); }
-  function closeForm() { setShowForm(false); setEditId(null); setForm(EMPTY_FORM); setAiStatus(""); }
+    setAiStatus("");
+  }
 
   async function handleSubmit() {
-    if (!form.romanized.trim() || !form.english.trim()) return;
-    if (editId !== null) {
-      await updateWord(editId, form);
-    } else {
-      await addWord(form, user);
+    if (
+      !form.romanized.trim() ||
+      !form.english.trim()
+    ) {
+      return;
     }
-    closeForm();
+
+    try {
+      if (editId !== null) {
+        await updateWord(editId, form);
+      } else {
+        await addWord(form, user);
+      }
+
+      closeForm();
+    } catch (error) {
+      console.error(
+        "Could not save word:",
+        error
+      );
+    }
   }
 
   function handleEdit(word) {
-    setForm({ ...word, categories: word.categories || [] });
-    setEditId(word.id); setAiStatus(""); setShowForm(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setForm({
+      ...word,
+      categories: word.categories || [],
+    });
+
+    setEditId(word.id);
+    setAiStatus("");
+    setShowForm(true);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   }
 
   async function handleDelete(id) {
-    await deleteWord(id);
-    if (expandedId === id) setExpandedId(null);
+    try {
+      await deleteWord(id);
+
+      if (expandedId === id) {
+        setExpandedId(null);
+      }
+    } catch (error) {
+      console.error(
+        "Could not delete word:",
+        error
+      );
+    }
   }
 
   function canDelete(word) {
     if (!user) return false;
-    return isAdmin || word.addedBy === user.uid;
+
+    return (
+      isAdmin ||
+      word.addedBy === user.uid
+    );
   }
 
   async function handleSignOut() {
     await signOut(auth);
+
+    setUser(null);
     setIsAdmin(false);
     setShowUserMenu(false);
   }
 
-  function field(key, label, placeholder) {
+  function field(
+    key,
+    label,
+    placeholder
+  ) {
     return (
-      <div>
-        <label className="form-label">{label}</label>
-        <input className="form-input" value={form[key]}
-          onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-          placeholder={placeholder} />
+      <div className="form-field">
+        <label className="form-label">
+          {label}
+        </label>
+
+        <input
+          className="form-input"
+          value={form[key] || ""}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              [key]: event.target.value,
+            }))
+          }
+          placeholder={placeholder}
+        />
       </div>
     );
   }
 
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
   return (
-    <div>
+    <div className="app">
       <header className="header">
         <div className="header-inner">
           <div>
-            <div className="header-title">Mati</div>
+            <div className="header-title">
+              Mati
+            </div>
+
             <div className="header-sub">
-              Bangla Dictionary · {words.length} {words.length === 1 ? "entry" : "entries"}
-              {isAdmin && <span style={{ color: "var(--accent-warm)", marginLeft: "0.5rem" }}>· admin</span>}
+              Bangla Dictionary ·{" "}
+              {words.length}{" "}
+              {words.length === 1
+                ? "entry"
+                : "entries"}
+
+              {isAdmin && (
+                <span className="admin-label">
+                  · admin
+                </span>
+              )}
             </div>
           </div>
-          <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
-            {showForm
-              ? <button className="btn-ghost" onClick={closeForm}>✕ cancel</button>
-              : <button className="btn-primary" onClick={openForm}>+ new word</button>
-            }
-            <div style={{ position: "relative" }}>
-              <div
-                onClick={() => setShowUserMenu((v) => !v)}
-                style={{
-                  width: "32px", height: "32px", borderRadius: "50%",
-                  background: "var(--accent)", color: "var(--bg)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "0.72rem", fontFamily: "var(--mono)",
-                  cursor: "pointer", letterSpacing: "0.05em",
-                  border: "1px solid var(--border)",
-                }}>
-                {user?.email?.[0].toUpperCase() || "?"}
-              </div>
+
+          <div className="header-actions">
+            {showForm ? (
+              <button
+                className="btn-ghost"
+                onClick={closeForm}
+              >
+                ✕ cancel
+              </button>
+            ) : (
+              <button
+                className="btn-primary"
+                onClick={openForm}
+              >
+                + new word
+              </button>
+            )}
+
+            <div className="user-menu-wrapper">
+              <button
+                className="user-avatar"
+                onClick={() =>
+                  setShowUserMenu(
+                    (value) => !value
+                  )
+                }
+              >
+                {user?.email?.[0]
+                  ? user.email[0].toUpperCase()
+                  : "?"}
+              </button>
+
               {showUserMenu && (
-                <div style={{
-                  position: "absolute", right: 0, top: "calc(100% + 8px)",
-                  background: "var(--bg)", border: "1px solid var(--border)",
-                  borderRadius: "4px", minWidth: "160px", zIndex: 200,
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
-                }}>
-                  <div style={{ padding: "0.6rem 0.85rem", fontSize: "0.68rem", color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>
-                    {user?.email}
+                <div className="user-menu">
+                  <div className="user-email">
+                    {user?.email ||
+                      "Not signed in"}
                   </div>
+
                   {isAdmin && (
-                    <div style={{ padding: "0.6rem 0.85rem", fontSize: "0.68rem", color: "var(--accent-warm)" }}>
+                    <div className="user-admin">
                       admin
                     </div>
                   )}
-                  <div
+
+                  <button
+                    className="sign-out-button"
                     onClick={handleSignOut}
-                    style={{ padding: "0.6rem 0.85rem", fontSize: "0.68rem", color: "var(--text-mid)", cursor: "pointer" }}
-                    onMouseEnter={(e) => e.target.style.color = "var(--danger)"}
-                    onMouseLeave={(e) => e.target.style.color = "var(--text-mid)"}
                   >
                     sign out
-                  </div>
+                  </button>
                 </div>
               )}
             </div>
@@ -277,103 +686,286 @@ export default function BanglaDictionary() {
       <main className="main">
         {showForm && (
           <div className="form-panel">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.5rem" }}>
-              <div className="form-section-label" style={{ marginBottom: 0 }}>
-                {editId ? "— edit entry" : "— new entry"}
+            <div className="form-header">
+              <div className="form-section-label">
+                {editId
+                  ? "edit entry"
+                  : "new entry"}
               </div>
-              {aiLoading && <span className="ai-status loading">generating...</span>}
-              {aiStatus === "ok" && <span className="ai-status ok">✓ filled by AI</span>}
-              {aiStatus === "err" && <span className="ai-status err">⚠ AI failed</span>}
+
+              <div>
+                {aiLoading && (
+                  <span className="ai-status loading">
+                    generating...
+                  </span>
+                )}
+
+                {aiStatus === "ok" && (
+                  <span className="ai-status ok">
+                    ✓ filled by AI
+                  </span>
+                )}
+
+                {aiStatus === "err" && (
+                  <span className="ai-status err">
+                    ⚠ AI failed
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className="form-grid-2" style={{ marginBottom: "1rem" }}>
-              {field("romanized", "Romanized Bangla *", "e.g. bhalobasha")}
-              {field("english", "English Meaning *", "e.g. love")}
-              {field("partOfSpeech", "Part of Speech", "—")}
+            <div className="form-grid">
+              {field(
+                "romanized",
+                "Romanized Bangla *",
+                "e.g. bhalobasha"
+              )}
+
+              {field(
+                "english",
+                "English Meaning *",
+                "e.g. love"
+              )}
+
+              {field(
+                "partOfSpeech",
+                "Part of Speech",
+                "e.g. noun"
+              )}
             </div>
 
-            <div style={{ marginBottom: "1rem" }}>
-              <label className="form-label">Example sentence</label>
-              <input className="form-input" value={form.example}
-                onChange={(e) => setForm((f) => ({ ...f, example: e.target.value }))}
-                placeholder="Write your own example..." />
-            </div>
+            <div className="form-field">
+              <label className="form-label">
+                Example sentence
+              </label>
 
-            <div style={{ marginBottom: "1.25rem" }}>
-              <CategoryPicker
-                selected={form.categories || []}
-                onChange={(cats) => setForm((f) => ({ ...f, categories: cats }))}
+              <input
+                className="form-input"
+                value={form.example || ""}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    example:
+                      event.target.value,
+                  }))
+                }
+                placeholder="Write your own example..."
               />
             </div>
 
+            <CategoryPicker
+              selected={
+                form.categories || []
+              }
+              onChange={(categories) =>
+                setForm((current) => ({
+                  ...current,
+                  categories,
+                }))
+              }
+            />
+
             <div className="form-actions">
-              <button className="btn-primary" onClick={handleSubmit}>
-                {editId ? "save changes" : "add to dictionary"}
+              <button
+                className="btn-primary"
+                onClick={handleSubmit}
+              >
+                {editId
+                  ? "save changes"
+                  : "add to dictionary"}
               </button>
-              <button className="btn-ghost" onClick={closeForm}>cancel</button>
+
+              <button
+                className="btn-ghost"
+                onClick={closeForm}
+              >
+                cancel
+              </button>
             </div>
           </div>
         )}
 
         {words.length > 0 && (
           <div className="controls">
-            <input className="search-input" value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search romanized or english..." />
-            <select className="filter-select" value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}>
+            <input
+              className="search-input"
+              value={search}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
+              placeholder="Search romanized or english..."
+            />
+
+            <select
+              className="filter-select"
+              value={filterCategory}
+              onChange={(event) =>
+                setFilterCategory(
+                  event.target.value
+                )
+              }
+            >
               <option>All</option>
-              {allCategories.map((c) => <option key={c}>{c}</option>)}
+
+              {allCategories.map(
+                (category) => (
+                  <option
+                    key={category}
+                    value={category}
+                  >
+                    {category}
+                  </option>
+                )
+              )}
             </select>
+
             <div className="view-toggle">
-              {["grid", "list", "categories"].map((v) => (
-                <button key={v} className={`view-btn${view === v ? " active" : ""}`}
-                  onClick={() => setView(v)}>{v}</button>
+              {[
+                "grid",
+                "list",
+                "categories",
+                "saved",
+              ].map((viewName) => (
+                <button
+                  key={viewName}
+                  className={`view-btn ${
+                    view === viewName
+                      ? "active"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setView(viewName)
+                  }
+                >
+                  {viewName}
+                </button>
               ))}
             </div>
-            <span className="word-count">{filtered.length} words</span>
+
+            <span className="word-count">
+              {filtered.length} words
+            </span>
           </div>
         )}
 
-        {view === "grid" && (
+        {(view === "grid" ||
+          view === "saved") && (
           <div className="grid-view">
-            {filtered.map((w) => (
-              <WordCard key={w.id} word={w}
-                expanded={expandedId === w.id}
-                onExpand={() => setExpandedId(expandedId === w.id ? null : w.id)}
-                onEdit={() => handleEdit(w)}
-                onDelete={() => handleDelete(w.id)}
-                canDelete={canDelete(w)} />
+            {filtered.map((word) => (
+              <WordCard
+                key={word.id}
+                word={word}
+                expanded={
+                  expandedId === word.id
+                }
+                onExpand={() =>
+                  setExpandedId(
+                    expandedId === word.id
+                      ? null
+                      : word.id
+                  )
+                }
+                onEdit={() =>
+                  handleEdit(word)
+                }
+                onDelete={() =>
+                  handleDelete(word.id)
+                }
+                canDelete={canDelete(word)}
+                isBookmarked={bookmarks.has(
+                  word.id
+                )}
+                onBookmark={() =>
+                  toggleBookmark(word.id)
+                }
+              />
             ))}
           </div>
         )}
 
         {view === "list" && (
-          <div>
+          <div className="list-view">
             <div className="list-header">
-              <span>Romanized</span><span>English</span>
-              <span>Categories</span><span>Part of Speech</span><span></span>
+              <span>Romanized</span>
+              <span>English</span>
+              <span>Categories</span>
+              <span>Part of Speech</span>
+              <span />
             </div>
-            {filtered.map((w) => (
-              <div key={w.id}>
-                <div className={`list-row${expandedId === w.id ? " expanded" : ""}`}
-                  onClick={() => setExpandedId(expandedId === w.id ? null : w.id)}>
-                  <span className="list-romanized">{w.romanized}</span>
-                  <span className="list-english">{w.english}</span>
-                  <span><CategoryTags categories={w.categories} /></span>
-                  <span className="list-pos">{w.partOfSpeech || "—"}</span>
-                  <div style={{ display: "flex", gap: "0.4rem" }} onClick={(e) => e.stopPropagation()}>
-                    <button className="btn-small" onClick={() => handleEdit(w)}>edit</button>
-                    {canDelete(w) && (
-                      <button className="btn-danger" onClick={() => handleDelete(w.id)}>del</button>
+
+            {filtered.map((word) => (
+              <div key={word.id}>
+                <div
+                  className={`list-row ${
+                    expandedId === word.id
+                      ? "expanded"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setExpandedId(
+                      expandedId === word.id
+                        ? null
+                        : word.id
+                    )
+                  }
+                >
+                  <span className="list-romanized">
+                    {word.romanized}
+                  </span>
+
+                  <span className="list-english">
+                    {word.english}
+                  </span>
+
+                  <span>
+                    <CategoryTags
+                      categories={
+                        word.categories
+                      }
+                    />
+                  </span>
+
+                  <span className="list-pos">
+                    {word.partOfSpeech ||
+                      "—"}
+                  </span>
+
+                  <div
+                    className="list-actions"
+                    onClick={(event) =>
+                      event.stopPropagation()
+                    }
+                  >
+                    <button
+                      className="btn-small"
+                      onClick={() =>
+                        handleEdit(word)
+                      }
+                    >
+                      edit
+                    </button>
+
+                    {canDelete(word) && (
+                      <button
+                        className="btn-danger"
+                        onClick={() =>
+                          handleDelete(
+                            word.id
+                          )
+                        }
+                      >
+                        del
+                      </button>
                     )}
                   </div>
                 </div>
-                {expandedId === w.id && w.example && (
-                  <div className="list-expanded">
-                    <span className="list-example">"{w.example}"</span>
-                  </div>
-                )}
+
+                {expandedId === word.id &&
+                  word.example && (
+                    <div className="list-expanded">
+                      "{word.example}"
+                    </div>
+                  )}
               </div>
             ))}
           </div>
@@ -381,44 +973,127 @@ export default function BanglaDictionary() {
 
         {view === "categories" && (
           <div className="themes-view">
-            {Object.entries(grouped).sort().map(([category, cw]) => {
-              const tc = getCategoryColor(category);
-              return (
-                <div key={category}>
-                  <div className="theme-section-header">
-                    <div className="theme-dot" style={{ background: tc }} />
-                    <span className="theme-section-name">{category}</span>
-                    <div className="theme-divider" />
-                    <span className="theme-count">{cw.length}</span>
-                  </div>
-                  <div className="grid-view">
-                    {cw.map((w) => (
-                      <WordCard key={w.id} word={w}
-                        expanded={expandedId === w.id}
-                        onExpand={() => setExpandedId(expandedId === w.id ? null : w.id)}
-                        onEdit={() => handleEdit(w)}
-                        onDelete={() => handleDelete(w.id)}
-                        canDelete={canDelete(w)} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+            {Object.entries(grouped)
+              .sort()
+              .map(
+                ([category, categoryWords]) => {
+                  const color =
+                    getCategoryColor(category);
+
+                  return (
+                    <div
+                      key={category}
+                      className="theme-section"
+                    >
+                      <div className="theme-section-header">
+                        <div
+                          className="theme-dot"
+                          style={{
+                            backgroundColor:
+                              color.border,
+                          }}
+                        />
+
+                        <span
+                          className="theme-section-name"
+                          style={{
+                            color: color.text,
+                          }}
+                        >
+                          {category}
+                        </span>
+
+                        <div className="theme-divider" />
+
+                        <span className="theme-count">
+                          {categoryWords.length}
+                        </span>
+                      </div>
+
+                      <div className="grid-view">
+                        {categoryWords.map(
+                          (word) => (
+                            <WordCard
+                              key={word.id}
+                              word={word}
+                              expanded={
+                                expandedId ===
+                                word.id
+                              }
+                              onExpand={() =>
+                                setExpandedId(
+                                  expandedId ===
+                                    word.id
+                                    ? null
+                                    : word.id
+                                )
+                              }
+                              onEdit={() =>
+                                handleEdit(word)
+                              }
+                              onDelete={() =>
+                                handleDelete(
+                                  word.id
+                                )
+                              }
+                              canDelete={canDelete(
+                                word
+                              )}
+                              isBookmarked={bookmarks.has(
+                                word.id
+                              )}
+                              onBookmark={() =>
+                                toggleBookmark(
+                                  word.id
+                                )
+                              }
+                            />
+                          )
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+              )}
           </div>
         )}
 
-        {words.length === 0 && !showForm && (
-          <div className="empty-state">
-            <div className="empty-icon">∅</div>
-            <div className="empty-text">No entries yet — add your first word</div>
-          </div>
-        )}
-        {words.length > 0 && filtered.length === 0 && (
-          <div className="empty-state">
-            <div className="empty-icon">∅</div>
-            <div className="empty-text">No entries match your search</div>
-          </div>
-        )}
+        {words.length === 0 &&
+          !showForm && (
+            <div className="empty-state">
+              <div className="empty-icon">
+                ∅
+              </div>
+
+              <div className="empty-text">
+                No entries yet. Add your first
+                word.
+              </div>
+            </div>
+          )}
+
+        {words.length > 0 &&
+          filtered.length === 0 &&
+          view !== "saved" && (
+            <div className="empty-state">
+              <div className="empty-icon">
+                ∅
+              </div>
+
+              <div className="empty-text">
+                No entries match your search.
+              </div>
+            </div>
+          )}
+
+        {view === "saved" &&
+          filtered.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-text">
+                No saved words yet.
+              </div>
+            </div>
+          )}
       </main>
     </div>
   );
