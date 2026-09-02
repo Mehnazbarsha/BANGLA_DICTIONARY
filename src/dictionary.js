@@ -1,3 +1,13 @@
+export async function saveUserProfile(uid, data) {
+  await setDoc(doc(db, "users", uid, "profile", "data"), data, { merge: true });
+}
+
+export function subscribeToProfile(uid, callback) {
+  return onSnapshot(doc(db, "users", uid, "profile", "data"), (snap) => {
+    callback(snap.exists() ? snap.data() : null);
+  });
+}
+
 import { db } from "./firebase";
 import {
   collection,
@@ -504,3 +514,4 @@ export async function aiEnrich(romanized, english) {
     categories: [...new Set(validCategories)],
   };
 }
+

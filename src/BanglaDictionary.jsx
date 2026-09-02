@@ -1,12 +1,5 @@
-import {
-  useState,
-  useMemo,
-  useEffect,
-  useRef,
-} from "react";
-
+import { useState, useMemo, useEffect, useRef } from "react";
 import "./dictionary.css";
-
 import {
   EMPTY_FORM,
   ALL_CATEGORIES,
@@ -20,49 +13,29 @@ import {
   deleteWord,
   updateWord,
 } from "./dictionary.js";
-
 import { auth, db } from "./firebase.js";
-
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import {
-  signOut,
-  onAuthStateChanged,
-} from "firebase/auth";
-
-import {
-  doc,
-  setDoc,
-  deleteDoc,
-  collection,
-  onSnapshot,
+  doc, setDoc, deleteDoc, collection, onSnapshot,
 } from "firebase/firestore";
 
 const ADMIN_EMAIL = "barshamehnaz@gmail.com";
 
-// ============================================================
-// CATEGORY TAGS
-// ============================================================
+// ── CATEGORY TAGS ──────────────────────────────────────────────
 
 function CategoryTags({ categories }) {
-  if (!categories || categories.length === 0) {
-    return null;
-  }
-
+  if (!categories || categories.length === 0) return null;
   return (
     <div className="category-tags">
-      {categories.map((category) => {
-        const color = getCategoryColor(category);
-
+      {categories.map((c) => {
+        const cc = getCategoryColor(c);
         return (
-          <span
-            key={category}
-            className="category-tag-colored"
-            style={{
-              backgroundColor: color.tag,
-              color: color.text,
-              borderColor: color.border,
-            }}
-          >
-            {category}
+          <span key={c} className="category-tag-colored" style={{
+            background: cc.bg,
+            color: cc.text,
+            borderColor: cc.border,
+          }}>
+            {c}
           </span>
         );
       })}
@@ -70,125 +43,50 @@ function CategoryTags({ categories }) {
   );
 }
 
-// ============================================================
-// WORD CARD
-// ============================================================
+// ── WORD CARD ──────────────────────────────────────────────────
 
-function WordCard({
-  word,
-  expanded,
-  onExpand,
-  onEdit,
-  onDelete,
-  canDelete,
-  isBookmarked,
-  onBookmark,
-}) {
-  const category =
-    word.categories && word.categories.length > 0
-      ? word.categories[0]
-      : null;
-
-  const color = getCategoryColor(category);
+function WordCard({ word, expanded, onExpand, onEdit, onDelete, canDelete, isBookmarked, onBookmark }) {
+  const cc = word.categories && word.categories.length
+    ? getCategoryColor(word.categories[0])
+    : { bg: "#f0f0f0", border: "#d0d0d0", text: "#404040", tag: "#d0d0d0" };
 
   return (
     <div
       className="word-card"
       onClick={onExpand}
-      style={{
-        backgroundColor: color.bg,
-        borderColor: color.border,
-      }}
+      style={{ background: cc.bg, borderColor: cc.border }}
     >
       <div className="word-card-top">
         {word.partOfSpeech && (
-          <span
-            className="part-of-speech"
-            style={{
-              backgroundColor: color.tag,
-              color: color.text,
-            }}
-          >
+          <span className="part-of-speech" style={{ background: cc.tag, color: cc.text }}>
             {word.partOfSpeech}
           </span>
         )}
-
         <button
           className="bookmark-button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onBookmark();
-          }}
-          style={{
-            color: color.border,
-          }}
-          aria-label="Bookmark word"
+          onClick={(e) => { e.stopPropagation(); onBookmark(); }}
+          style={{ color: cc.text, opacity: isBookmarked ? 1 : 0.4 }}
         >
-          <i
-            className={
-              isBookmarked
-                ? "ti ti-bookmark-filled"
-                : "ti ti-bookmark"
-            }
-          />
+          <i className={isBookmarked ? "ti ti-bookmark-filled" : "ti ti-bookmark"} />
         </button>
       </div>
 
-      <div
-        className="word-romanized"
-        style={{
-          color: color.text,
-        }}
-      >
-        {word.romanized}
-      </div>
-
-      <div
-        className="word-english"
-        style={{
-          color: color.text,
-        }}
-      >
-        {word.english}
-      </div>
-
+      <div className="word-romanized" style={{ color: cc.text }}>{word.romanized}</div>
+      <div className="word-english" style={{ color: cc.text }}>{word.english}</div>
       <CategoryTags categories={word.categories} />
 
       {expanded && (
         <div
           className="word-expanded"
-          onClick={(event) => event.stopPropagation()}
-          style={{
-            borderTopColor: color.border,
-          }}
+          style={{ borderColor: cc.border }}
+          onClick={(e) => e.stopPropagation()}
         >
           {word.example && (
-            <div
-              className="word-example"
-              style={{
-                color: color.text,
-              }}
-            >
-              "{word.example}"
-            </div>
+            <div className="word-example" style={{ color: cc.text }}>{word.example}</div>
           )}
-
           <div className="word-actions">
-            <button
-              className="btn-small"
-              onClick={onEdit}
-            >
-              edit
-            </button>
-
-            {canDelete && (
-              <button
-                className="btn-danger"
-                onClick={onDelete}
-              >
-                delete
-              </button>
-            )}
+            <button className="btn-small" onClick={onEdit}>edit</button>
+            {canDelete && <button className="btn-danger" onClick={onDelete}>delete</button>}
           </div>
         </div>
       )}
@@ -196,54 +94,25 @@ function WordCard({
   );
 }
 
-// ============================================================
-// CATEGORY PICKER
-// ============================================================
+// ── CATEGORY PICKER ────────────────────────────────────────────
 
 function CategoryPicker({ selected, onChange }) {
   return (
     <div className="category-picker-wrapper">
-      <label className="form-label">
-        Categories · select all that apply
-      </label>
-
+      <label className="form-label">Categories (select all that apply)</label>
       <div className="category-picker">
-        {ALL_CATEGORIES.map((category) => {
-          const active = selected.includes(category);
-          const color = getCategoryColor(category);
-
+        {ALL_CATEGORIES.map((c) => {
+          const active = selected.includes(c);
+          const cc = getCategoryColor(c);
           return (
             <button
-              key={category}
+              key={c}
               type="button"
-              className={`category-picker-button ${
-                active ? "selected" : ""
-              }`}
-              onClick={() => {
-                if (active) {
-                  onChange(
-                    selected.filter(
-                      (item) => item !== category
-                    )
-                  );
-                } else {
-                  onChange([
-                    ...selected,
-                    category,
-                  ]);
-                }
-              }}
-              style={
-                active
-                  ? {
-                      backgroundColor: color.bg,
-                      color: color.text,
-                      borderColor: color.border,
-                    }
-                  : undefined
-              }
+              className={`category-picker-button${active ? " selected" : ""}`}
+              onClick={() => onChange(active ? selected.filter((x) => x !== c) : [...selected, c])}
+              style={active ? { background: cc.bg, color: cc.text, borderColor: cc.border } : {}}
             >
-              {category}
+              {c}
             </button>
           );
         })}
@@ -252,430 +121,227 @@ function CategoryPicker({ selected, onChange }) {
   );
 }
 
-// ============================================================
-// MAIN APP
-// ============================================================
+// ── MAIN APP ───────────────────────────────────────────────────
 
 export default function BanglaDictionary() {
   const [words, setWords] = useState([]);
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [bookmarks, setBookmarks] = useState(new Set());
-
+  const [profile, setProfile] = useState(null);
+  const [heroCollapsed, setHeroCollapsed] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
-
   const [search, setSearch] = useState("");
-  const [filterCategory, setFilterCategory] =
-    useState("All");
-
+  const [filterCategory, setFilterCategory] = useState("All");
   const [view, setView] = useState("grid");
   const [expandedId, setExpandedId] = useState(null);
-
   const [aiLoading, setAiLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState("");
-
   const debounceRef = useRef(null);
 
-  // ==========================================================
-  // AUTH
-  // ==========================================================
-
+  // ── SCROLL HERO ──
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (currentUser) => {
-        setUser(currentUser);
-
-        if (currentUser) {
-          setIsAdmin(
-            currentUser.email === ADMIN_EMAIL
-          );
-        } else {
-          setIsAdmin(false);
-        }
-      }
-    );
-
-    return unsubscribe;
+    const handleScroll = () => setHeroCollapsed(window.scrollY > 80);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // ==========================================================
-  // FIRESTORE WORDS
-  // ==========================================================
-
+  // ── AUTH ──
   useEffect(() => {
-    const unsubscribe = subscribeToWords(
-      (newWords) => {
-        setWords(newWords);
-      }
-    );
-
-    return unsubscribe;
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (u) { setUser(u); setIsAdmin(u.email === ADMIN_EMAIL); }
+    });
+    return unsub;
   }, []);
 
-  // ==========================================================
-  // BOOKMARKS
-  // ==========================================================
-
+  // ── WORDS ──
   useEffect(() => {
-    if (!user) {
-      setBookmarks(new Set());
-      return undefined;
-    }
+    const unsub = subscribeToWords((w) => setWords(w));
+    return unsub;
+  }, []);
 
-    const unsubscribe = onSnapshot(
-      collection(
-        db,
-        "users",
-        user.uid,
-        "bookmarks"
-      ),
-      (snapshot) => {
-        setBookmarks(
-          new Set(
-            snapshot.docs.map(
-              (document) => document.id
-            )
-          )
-        );
-      }
-    );
+  // ── BOOKMARKS ──
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(collection(db, "users", user.uid, "bookmarks"), (snap) => {
+      setBookmarks(new Set(snap.docs.map((d) => d.id)));
+    });
+    return unsub;
+  }, [user]);
 
-    return unsubscribe;
+  // ── PROFILE ──
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(doc(db, "users", user.uid, "profile", "data"), (snap) => {
+      setProfile(snap.exists() ? snap.data() : null);
+    });
+    return unsub;
   }, [user]);
 
   async function toggleBookmark(wordId) {
     if (!user) return;
-
-    const reference = doc(
-      db,
-      "users",
-      user.uid,
-      "bookmarks",
-      wordId
-    );
-
+    const ref = doc(db, "users", user.uid, "bookmarks", wordId);
     if (bookmarks.has(wordId)) {
-      await deleteDoc(reference);
+      await deleteDoc(ref);
     } else {
-      await setDoc(reference, {
-        savedAt: new Date(),
-      });
+      await setDoc(ref, { savedAt: new Date() });
     }
   }
 
-  // ==========================================================
-  // FILTERING
-  // ==========================================================
-
-  const allCategories = useMemo(
-    () => deriveCategories(words),
-    [words]
-  );
-
-  const filtered = useMemo(() => {
-    const source =
-      view === "saved"
-        ? words.filter((word) =>
-            bookmarks.has(word.id)
-          )
-        : words;
-
-    return filterWords(
-      source,
-      search,
-      filterCategory
-    );
-  }, [
-    words,
-    search,
-    filterCategory,
-    view,
-    bookmarks,
-  ]);
-
-  const grouped = useMemo(
-    () => groupByCategory(filtered),
-    [filtered]
-  );
-
-  // ==========================================================
-  // AI AUTO ENRICH
-  // ==========================================================
-
-  useEffect(() => {
-    if (
-      !form.romanized.trim() ||
-      !form.english.trim()
-    ) {
-      return undefined;
-    }
-
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(
-      async () => {
-        setAiLoading(true);
-        setAiStatus("loading");
-
-        try {
-          const result = await aiEnrich(
-            form.romanized,
-            form.english
-          );
-
-          setForm((current) => ({
-            ...current,
-
-            partOfSpeech:
-              result.partOfSpeech ||
-              current.partOfSpeech,
-
-            categories:
-              result.categories &&
-              result.categories.length
-                ? result.categories
-                : current.categories,
-          }));
-
-          setAiStatus("ok");
-        } catch (error) {
-          console.error(
-            "AI enrichment failed:",
-            error
-          );
-
-          setAiStatus("err");
-        }
-
-        setAiLoading(false);
-
-        setTimeout(() => {
-          setAiStatus("");
-        }, 3000);
-      },
-      900
-    );
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
+  async function handleAvatarUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement("canvas");
+        const MAX = 120;
+        const ratio = Math.min(MAX / img.width, MAX / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL("image/jpeg", 0.7);
+        await setDoc(doc(db, "users", user.uid, "profile", "data"), { avatar: compressed }, { merge: true });
+        setShowUserMenu(false);
+      };
+      img.src = ev.target.result;
     };
-  }, [
-    form.romanized,
-    form.english,
-  ]);
-
-  // ==========================================================
-  // FORM
-  // ==========================================================
-
-  function openForm() {
-    setForm({
-      ...EMPTY_FORM,
-      categories: [],
-    });
-
-    setEditId(null);
-    setAiStatus("");
-    setShowForm(true);
+    reader.readAsDataURL(file);
   }
 
-  function closeForm() {
-    setShowForm(false);
-    setEditId(null);
+  const allCategories = useMemo(() => deriveCategories(words), [words]);
+  const filtered = useMemo(() => {
+    const base = view === "saved" ? words.filter((w) => bookmarks.has(w.id)) : words;
+    return filterWords(base, search, filterCategory);
+  }, [words, search, filterCategory, view, bookmarks]);
+  const grouped = useMemo(() => groupByCategory(filtered), [filtered]);
 
-    setForm({
-      ...EMPTY_FORM,
-      categories: [],
-    });
+  // ── AI ──
+  useEffect(() => {
+    if (!form.romanized.trim() || !form.english.trim()) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setAiLoading(true); setAiStatus("loading");
+      try {
+        const result = await aiEnrich(form.romanized, form.english);
+        setForm((f) => ({
+          ...f,
+          partOfSpeech: result.partOfSpeech || f.partOfSpeech,
+          categories: result.categories.length ? result.categories : f.categories,
+        }));
+        setAiStatus("ok");
+      } catch (e) {
+        console.error(e); setAiStatus("err");
+      }
+      setAiLoading(false);
+      setTimeout(() => setAiStatus(""), 3000);
+    }, 900);
+    return () => clearTimeout(debounceRef.current);
+  }, [form.romanized, form.english]);
 
-    setAiStatus("");
-  }
+  function openForm() { setForm(EMPTY_FORM); setEditId(null); setAiStatus(""); setShowForm(true); }
+  function closeForm() { setShowForm(false); setEditId(null); setForm(EMPTY_FORM); setAiStatus(""); }
 
   async function handleSubmit() {
-    if (
-      !form.romanized.trim() ||
-      !form.english.trim()
-    ) {
-      return;
-    }
-
-    try {
-      if (editId !== null) {
-        await updateWord(editId, form);
-      } else {
-        await addWord(form, user);
-      }
-
-      closeForm();
-    } catch (error) {
-      console.error(
-        "Could not save word:",
-        error
-      );
-    }
+    if (!form.romanized.trim() || !form.english.trim()) return;
+    if (editId !== null) { await updateWord(editId, form); }
+    else { await addWord(form, user); }
+    closeForm();
   }
 
   function handleEdit(word) {
-    setForm({
-      ...word,
-      categories: word.categories || [],
-    });
-
-    setEditId(word.id);
-    setAiStatus("");
-    setShowForm(true);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    setForm({ ...word, categories: word.categories || [] });
+    setEditId(word.id); setAiStatus(""); setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handleDelete(id) {
-    try {
-      await deleteWord(id);
-
-      if (expandedId === id) {
-        setExpandedId(null);
-      }
-    } catch (error) {
-      console.error(
-        "Could not delete word:",
-        error
-      );
-    }
+    await deleteWord(id);
+    if (expandedId === id) setExpandedId(null);
   }
 
   function canDelete(word) {
     if (!user) return false;
-
-    return (
-      isAdmin ||
-      word.addedBy === user.uid
-    );
+    return isAdmin || word.addedBy === user.uid;
   }
 
   async function handleSignOut() {
     await signOut(auth);
-
-    setUser(null);
     setIsAdmin(false);
     setShowUserMenu(false);
   }
 
-  function field(
-    key,
-    label,
-    placeholder
-  ) {
+  function field(key, label, placeholder) {
     return (
       <div className="form-field">
-        <label className="form-label">
-          {label}
-        </label>
-
+        <label className="form-label">{label}</label>
         <input
           className="form-input"
-          value={form[key] || ""}
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              [key]: event.target.value,
-            }))
-          }
+          value={form[key]}
+          onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
           placeholder={placeholder}
         />
       </div>
     );
   }
 
-  // ==========================================================
-  // RENDER
-  // ==========================================================
-
   return (
-    <div className="app">
+    <div>
       <header className="header">
         <div className="header-inner">
           <div>
-            <div className="header-title">
-              Mati
-            </div>
-
+            <div className="header-title">Mati</div>
             <div className="header-sub">
-              Bangla Dictionary ·{" "}
-              {words.length}{" "}
-              {words.length === 1
-                ? "entry"
-                : "entries"}
-
-              {isAdmin && (
-                <span className="admin-label">
-                  · admin
-                </span>
-              )}
+              Bangla Dictionary · {words.length} {words.length === 1 ? "entry" : "entries"}
+              {isAdmin && <span className="admin-label">· admin</span>}
             </div>
           </div>
-
           <div className="header-actions">
-            {showForm ? (
-              <button
-                className="btn-ghost"
-                onClick={closeForm}
-              >
-                ✕ cancel
-              </button>
-            ) : (
-              <button
-                className="btn-primary"
-                onClick={openForm}
-              >
-                + new word
-              </button>
-            )}
-
+            {showForm
+              ? <button className="btn-ghost" onClick={closeForm}>✕ cancel</button>
+              : <button className="btn-primary" onClick={openForm}>+ new word</button>
+            }
             <div className="user-menu-wrapper">
-              <button
+              <div
                 className="user-avatar"
-                onClick={() =>
-                  setShowUserMenu(
-                    (value) => !value
-                  )
-                }
+                onClick={() => setShowUserMenu((v) => !v)}
+                style={{
+                  backgroundImage: profile?.avatar ? `url(${profile.avatar})` : "none",
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
               >
-                {user?.email?.[0]
-                  ? user.email[0].toUpperCase()
-                  : "?"}
-              </button>
-
+                {!profile?.avatar && (user?.email?.[0].toUpperCase() || "?")}
+              </div>
               {showUserMenu && (
                 <div className="user-menu">
-                  <div className="user-email">
-                    {user?.email ||
-                      "Not signed in"}
-                  </div>
-
-                  {isAdmin && (
-                    <div className="user-admin">
-                      admin
-                    </div>
-                  )}
-
-                  <button
-                    className="sign-out-button"
-                    onClick={handleSignOut}
+                  <div className="user-email">{user?.email}</div>
+                  {isAdmin && <div className="user-admin">admin</div>}
+                  <label style={{
+                    display: "block",
+                    padding: "0.7rem 0.8rem",
+                    fontSize: "0.65rem",
+                    color: "var(--text-mid)",
+                    cursor: "pointer",
+                    borderBottom: "1px solid var(--border)",
+                  }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#fcf8f8"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                   >
-                    sign out
-                  </button>
+                    upload photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={handleAvatarUpload}
+                    />
+                  </label>
+                  <button className="sign-out-button" onClick={handleSignOut}>sign out</button>
                 </div>
               )}
             </div>
@@ -683,104 +349,41 @@ export default function BanglaDictionary() {
         </div>
       </header>
 
+      <div className={`hero${heroCollapsed ? " collapsed" : ""}`}>
+        <h1 className="hero-heading">
+          A living<br /><em>dictionary</em>
+        </h1>
+        <p className="hero-sub">
+          A personal archive of Bangla words — their meanings, categories, and stories.
+        </p>
+      </div>
+
       <main className="main">
         {showForm && (
           <div className="form-panel">
             <div className="form-header">
-              <div className="form-section-label">
-                {editId
-                  ? "edit entry"
-                  : "new entry"}
-              </div>
-
-              <div>
-                {aiLoading && (
-                  <span className="ai-status loading">
-                    generating...
-                  </span>
-                )}
-
-                {aiStatus === "ok" && (
-                  <span className="ai-status ok">
-                    ✓ filled by AI
-                  </span>
-                )}
-
-                {aiStatus === "err" && (
-                  <span className="ai-status err">
-                    ⚠ AI failed
-                  </span>
-                )}
-              </div>
+              <span className="form-section-label">
+                {editId ? "— edit entry" : "— new entry"}
+              </span>
+              {aiLoading && <span className="ai-status loading">generating...</span>}
+              {aiStatus === "ok" && <span className="ai-status ok">✓ filled by AI</span>}
+              {aiStatus === "err" && <span className="ai-status err">⚠ AI failed</span>}
             </div>
-
             <div className="form-grid">
-              {field(
-                "romanized",
-                "Romanized Bangla *",
-                "e.g. bhalobasha"
-              )}
-
-              {field(
-                "english",
-                "English Meaning *",
-                "e.g. love"
-              )}
-
-              {field(
-                "partOfSpeech",
-                "Part of Speech",
-                "e.g. noun"
-              )}
+              {field("romanized", "Romanized Bangla *", "e.g. bhalobasha")}
+              {field("english", "English Meaning *", "e.g. love")}
+              {field("partOfSpeech", "Part of Speech", "—")}
             </div>
-
-            <div className="form-field">
-              <label className="form-label">
-                Example sentence
-              </label>
-
-              <input
-                className="form-input"
-                value={form.example || ""}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    example:
-                      event.target.value,
-                  }))
-                }
-                placeholder="Write your own example..."
-              />
-            </div>
-
+            {field("example", "Example sentence", "Write your own example...")}
             <CategoryPicker
-              selected={
-                form.categories || []
-              }
-              onChange={(categories) =>
-                setForm((current) => ({
-                  ...current,
-                  categories,
-                }))
-              }
+              selected={form.categories || []}
+              onChange={(cats) => setForm((f) => ({ ...f, categories: cats }))}
             />
-
             <div className="form-actions">
-              <button
-                className="btn-primary"
-                onClick={handleSubmit}
-              >
-                {editId
-                  ? "save changes"
-                  : "add to dictionary"}
+              <button className="btn-primary" onClick={handleSubmit}>
+                {editId ? "save changes" : "add to dictionary"}
               </button>
-
-              <button
-                className="btn-ghost"
-                onClick={closeForm}
-              >
-                cancel
-              </button>
+              <button className="btn-ghost" onClick={closeForm}>cancel</button>
             </div>
           </div>
         )}
@@ -790,182 +393,71 @@ export default function BanglaDictionary() {
             <input
               className="search-input"
               value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Search romanized or english..."
             />
-
             <select
               className="filter-select"
               value={filterCategory}
-              onChange={(event) =>
-                setFilterCategory(
-                  event.target.value
-                )
-              }
+              onChange={(e) => setFilterCategory(e.target.value)}
             >
               <option>All</option>
-
-              {allCategories.map(
-                (category) => (
-                  <option
-                    key={category}
-                    value={category}
-                  >
-                    {category}
-                  </option>
-                )
-              )}
+              {allCategories.map((c) => <option key={c}>{c}</option>)}
             </select>
-
             <div className="view-toggle">
-              {[
-                "grid",
-                "list",
-                "categories",
-                "saved",
-              ].map((viewName) => (
+              {["grid", "list", "categories", "saved"].map((v) => (
                 <button
-                  key={viewName}
-                  className={`view-btn ${
-                    view === viewName
-                      ? "active"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setView(viewName)
-                  }
-                >
-                  {viewName}
-                </button>
+                  key={v}
+                  className={`view-btn${view === v ? " active" : ""}`}
+                  onClick={() => setView(v)}
+                >{v}</button>
               ))}
             </div>
-
-            <span className="word-count">
-              {filtered.length} words
-            </span>
+            <span className="word-count">{filtered.length} words</span>
           </div>
         )}
 
-        {(view === "grid" ||
-          view === "saved") && (
+        {(view === "grid" || view === "saved") && (
           <div className="grid-view">
-            {filtered.map((word) => (
-              <WordCard
-                key={word.id}
-                word={word}
-                expanded={
-                  expandedId === word.id
-                }
-                onExpand={() =>
-                  setExpandedId(
-                    expandedId === word.id
-                      ? null
-                      : word.id
-                  )
-                }
-                onEdit={() =>
-                  handleEdit(word)
-                }
-                onDelete={() =>
-                  handleDelete(word.id)
-                }
-                canDelete={canDelete(word)}
-                isBookmarked={bookmarks.has(
-                  word.id
-                )}
-                onBookmark={() =>
-                  toggleBookmark(word.id)
-                }
-              />
+            {filtered.map((w) => (
+              <WordCard key={w.id} word={w}
+                expanded={expandedId === w.id}
+                onExpand={() => setExpandedId(expandedId === w.id ? null : w.id)}
+                onEdit={() => handleEdit(w)}
+                onDelete={() => handleDelete(w.id)}
+                canDelete={canDelete(w)}
+                isBookmarked={bookmarks.has(w.id)}
+                onBookmark={() => toggleBookmark(w.id)} />
             ))}
           </div>
         )}
 
         {view === "list" && (
-          <div className="list-view">
+          <div>
             <div className="list-header">
-              <span>Romanized</span>
-              <span>English</span>
-              <span>Categories</span>
-              <span>Part of Speech</span>
-              <span />
+              <span>Romanized</span><span>English</span>
+              <span>Categories</span><span>Part of Speech</span><span></span>
             </div>
-
-            {filtered.map((word) => (
-              <div key={word.id}>
+            {filtered.map((w) => (
+              <div key={w.id}>
                 <div
-                  className={`list-row ${
-                    expandedId === word.id
-                      ? "expanded"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setExpandedId(
-                      expandedId === word.id
-                        ? null
-                        : word.id
-                    )
-                  }
+                  className={`list-row${expandedId === w.id ? " expanded" : ""}`}
+                  onClick={() => setExpandedId(expandedId === w.id ? null : w.id)}
                 >
-                  <span className="list-romanized">
-                    {word.romanized}
-                  </span>
-
-                  <span className="list-english">
-                    {word.english}
-                  </span>
-
-                  <span>
-                    <CategoryTags
-                      categories={
-                        word.categories
-                      }
-                    />
-                  </span>
-
-                  <span className="list-pos">
-                    {word.partOfSpeech ||
-                      "—"}
-                  </span>
-
-                  <div
-                    className="list-actions"
-                    onClick={(event) =>
-                      event.stopPropagation()
-                    }
-                  >
-                    <button
-                      className="btn-small"
-                      onClick={() =>
-                        handleEdit(word)
-                      }
-                    >
-                      edit
-                    </button>
-
-                    {canDelete(word) && (
-                      <button
-                        className="btn-danger"
-                        onClick={() =>
-                          handleDelete(
-                            word.id
-                          )
-                        }
-                      >
-                        del
-                      </button>
+                  <span className="list-romanized">{w.romanized}</span>
+                  <span className="list-english">{w.english}</span>
+                  <span><CategoryTags categories={w.categories} /></span>
+                  <span className="list-pos">{w.partOfSpeech || "—"}</span>
+                  <div className="list-actions" onClick={(e) => e.stopPropagation()}>
+                    <button className="btn-small" onClick={() => handleEdit(w)}>edit</button>
+                    {canDelete(w) && (
+                      <button className="btn-danger" onClick={() => handleDelete(w.id)}>del</button>
                     )}
                   </div>
                 </div>
-
-                {expandedId === word.id &&
-                  word.example && (
-                    <div className="list-expanded">
-                      "{word.example}"
-                    </div>
-                  )}
+                {expandedId === w.id && w.example && (
+                  <div className="list-expanded">"{w.example}"</div>
+                )}
               </div>
             ))}
           </div>
@@ -973,127 +465,52 @@ export default function BanglaDictionary() {
 
         {view === "categories" && (
           <div className="themes-view">
-            {Object.entries(grouped)
-              .sort()
-              .map(
-                ([category, categoryWords]) => {
-                  const color =
-                    getCategoryColor(category);
-
-                  return (
-                    <div
-                      key={category}
-                      className="theme-section"
-                    >
-                      <div className="theme-section-header">
-                        <div
-                          className="theme-dot"
-                          style={{
-                            backgroundColor:
-                              color.border,
-                          }}
-                        />
-
-                        <span
-                          className="theme-section-name"
-                          style={{
-                            color: color.text,
-                          }}
-                        >
-                          {category}
-                        </span>
-
-                        <div className="theme-divider" />
-
-                        <span className="theme-count">
-                          {categoryWords.length}
-                        </span>
-                      </div>
-
-                      <div className="grid-view">
-                        {categoryWords.map(
-                          (word) => (
-                            <WordCard
-                              key={word.id}
-                              word={word}
-                              expanded={
-                                expandedId ===
-                                word.id
-                              }
-                              onExpand={() =>
-                                setExpandedId(
-                                  expandedId ===
-                                    word.id
-                                    ? null
-                                    : word.id
-                                )
-                              }
-                              onEdit={() =>
-                                handleEdit(word)
-                              }
-                              onDelete={() =>
-                                handleDelete(
-                                  word.id
-                                )
-                              }
-                              canDelete={canDelete(
-                                word
-                              )}
-                              isBookmarked={bookmarks.has(
-                                word.id
-                              )}
-                              onBookmark={() =>
-                                toggleBookmark(
-                                  word.id
-                                )
-                              }
-                            />
-                          )
-                        )}
-                      </div>
-                    </div>
-                  );
-                }
-              )}
+            {Object.entries(grouped).sort().map(([category, cw]) => {
+              const cc = getCategoryColor(category);
+              return (
+                <div key={category}>
+                  <div className="theme-section-header">
+                    <div className="theme-dot" style={{ background: cc.border }} />
+                    <span className="theme-section-name">{category}</span>
+                    <div className="theme-divider" />
+                    <span className="theme-count">{cw.length}</span>
+                  </div>
+                  <div className="grid-view">
+                    {cw.map((w) => (
+                      <WordCard key={w.id} word={w}
+                        expanded={expandedId === w.id}
+                        onExpand={() => setExpandedId(expandedId === w.id ? null : w.id)}
+                        onEdit={() => handleEdit(w)}
+                        onDelete={() => handleDelete(w.id)}
+                        canDelete={canDelete(w)}
+                        isBookmarked={bookmarks.has(w.id)}
+                        onBookmark={() => toggleBookmark(w.id)} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
-        {words.length === 0 &&
-          !showForm && (
-            <div className="empty-state">
-              <div className="empty-icon">
-                ∅
-              </div>
-
-              <div className="empty-text">
-                No entries yet. Add your first
-                word.
-              </div>
-            </div>
-          )}
-
-        {words.length > 0 &&
-          filtered.length === 0 &&
-          view !== "saved" && (
-            <div className="empty-state">
-              <div className="empty-icon">
-                ∅
-              </div>
-
-              <div className="empty-text">
-                No entries match your search.
-              </div>
-            </div>
-          )}
-
-        {view === "saved" &&
-          filtered.length === 0 && (
-            <div className="empty-state">
-              <div className="empty-text">
-                No saved words yet.
-              </div>
-            </div>
-          )}
+        {words.length === 0 && !showForm && (
+          <div className="empty-state">
+            <div className="empty-icon">∅</div>
+            <div className="empty-text">No entries yet — add your first word</div>
+          </div>
+        )}
+        {words.length > 0 && filtered.length === 0 && view !== "saved" && (
+          <div className="empty-state">
+            <div className="empty-icon">∅</div>
+            <div className="empty-text">No entries match your search</div>
+          </div>
+        )}
+        {view === "saved" && filtered.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-icon">🔖</div>
+            <div className="empty-text">No saved words yet</div>
+          </div>
+        )}
       </main>
     </div>
   );
