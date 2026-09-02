@@ -394,7 +394,7 @@ export default function BanglaDictionary() {
               className="search-input"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search romanized or english..."
+              placeholder="Search romanized or english"
             />
             <select
               className="filter-select"
