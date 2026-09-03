@@ -2,7 +2,7 @@ import { StrictMode, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from './firebase.js'
-import BanglaDictionary from './BanglaDictionary'
+import BanglaDictionary from './BanglaDictionary.jsx'
 import AuthPage from './AuthPage'
 import './dictionary.css'
 

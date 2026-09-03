@@ -255,11 +255,11 @@ export async function aiEnrich(romanized, english) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "openai/gpt-oss-20b",
-      max_tokens: 200,
-      temperature: 0.2,
-      messages: [{ role: "user", content: prompt }],
-    }),
+    model: "openai/gpt-oss-20b",
+    max_completion_tokens: 300,
+    temperature: 0.2,
+    messages: [{ role: "user", content: prompt }],
+  }),
   });
 
   if (!res.ok) {
