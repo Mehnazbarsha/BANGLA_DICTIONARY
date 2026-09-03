@@ -351,7 +351,7 @@ export default function BanglaDictionary() {
 
       <div className={`hero${heroCollapsed ? " collapsed" : ""}`}>
         <h1 className="hero-heading">
-          A living<br /><em>dictionary</em>
+          Grow your<br /><em>Vocabulary</em>
         </h1>
         <p className="hero-sub">
           Explore Bangla words, their meanings, and categories
