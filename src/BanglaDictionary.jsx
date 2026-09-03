@@ -354,7 +354,7 @@ export default function BanglaDictionary() {
           A living<br /><em>dictionary</em>
         </h1>
         <p className="hero-sub">
-          A personal archive of Bangla words — their meanings, categories, and stories.
+          Explore Bangla words, their meanings, and categories
         </p>
       </div>
 
@@ -394,7 +394,7 @@ export default function BanglaDictionary() {
               className="search-input"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search romanized or english"
+              placeholder="Search romanized or english words"
             />
             <select
               className="filter-select"

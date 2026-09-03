@@ -19,7 +19,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    getRedirectResult(auth).catch(() => {});
+    getRedirectResult(auth).catch((e) => setError(e.message));
   }, []);
 
   async function handleEmail() {
@@ -33,7 +33,7 @@ export default function AuthPage() {
         await createUserWithEmailAndPassword(auth, email, password);
       }
     } catch (e) {
-      setError(e.message.replace("Firebase: ", "").replace(/\(auth.*\)/, "").trim());
+      setError(e.message);
     }
     setLoading(false);
   }
@@ -48,7 +48,7 @@ export default function AuthPage() {
         await signInWithPopup(auth, provider);
       }
     } catch (e) {
-      setError(e.message.replace("Firebase: ", "").replace(/\(auth.*\)/, "").trim());
+      setError(e.message);
     }
   }
 
@@ -92,12 +92,12 @@ export default function AuthPage() {
             letterSpacing: "0.18em",
             color: "var(--text-muted)",
             marginBottom: "1.25rem",
-          }}>মাটি</div>
+          }}>মাটি · dirt, soil</div>
           <p style={{ fontSize: "13px", color: "var(--text-mid)", lineHeight: 1.7, margin: 0 }}>
-            Hello, welcome to Mati
+            hello, welcome to mati.
           </p>
           <p style={{ fontSize: "13px", color: "var(--text-mid)", lineHeight: 1.7, margin: "0.75rem 0 0" }}>
-            A space to unearth for those who know the language but want to feel it at its roots
+            a space to unearth for those who know the language but want to feel it at its roots.
           </p>
         </div>
 
@@ -143,7 +143,7 @@ export default function AuthPage() {
             className="form-input"
           />
 
-          {error && error.length > 2 && (
+          {error && (
             <div style={{ fontSize: "12px", color: "var(--danger)" }}>{error}</div>
           )}
 
@@ -155,7 +155,7 @@ export default function AuthPage() {
         <div style={{ textAlign: "center" }}>
           {mode === "signin" ? (
             <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-              Don't have an account?{" "}
+              don't have an account?{" "}
               <span
                 onClick={() => { setMode("signup"); setError(""); }}
                 style={{ color: "var(--text-mid)", textDecoration: "underline", cursor: "pointer" }}>
@@ -164,7 +164,7 @@ export default function AuthPage() {
             </span>
           ) : (
             <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-              Already have an account?{" "}
+              already have an account?{" "}
               <span
                 onClick={() => { setMode("signin"); setError(""); }}
                 style={{ color: "var(--text-mid)", textDecoration: "underline", cursor: "pointer" }}>
