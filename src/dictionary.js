@@ -59,7 +59,12 @@ export const ALL_CATEGORIES = [
 
 export const CATEGORY_COLORS = {
   "Greetings":             { bg: "#fbefd7", border: "#e8d4a0", text: "#3a2e10", tag: "#e8d4a0" },
-  "Emotions":              { bg: "#f7dfbd", border: "#e0c090", text: "#3a2808", tag: "#e0c090" },
+  "Emotions": { 
+  bg: "#F6C878", 
+  border: "#D99F3D", 
+  text: "#3A2208", 
+  tag: "#D99F3D" 
+},
   "Relationships":         { bg: "#f7df99", border: "#d8c060", text: "#3a3008", tag: "#d8c060" },
   "Family":                { bg: "#f0b2a3", border: "#d08070", text: "#3a1810", tag: "#d08070" },
   "Food":                  { bg: "#f4cdd3", border: "#d8a0a8", text: "#3a1820", tag: "#d8a0a8" },
@@ -218,7 +223,6 @@ export function subscribeToProfile(uid, callback) {
 // ============================================================
 // AI ENRICH
 // ============================================================
-
 export async function aiEnrich(romanized, english) {
   const categoryList = ALL_CATEGORIES.join(", ");
 
@@ -245,43 +249,83 @@ export async function aiEnrich(romanized, english) {
     "2. Assign 1-3 categories.",
     `Only use categories from this list: ${categoryList}`,
     "",
-    "IMPORTANT: Category names must match the provided list EXACTLY, including capitalization.",
+    "IMPORTANT:",
+    "- Category names must match the provided list EXACTLY, including capitalization.",
+    "- Return ONLY the JSON object.",
+    "- Do not include markdown.",
+    "- Do not include ```.",
+    "- Do not include explanations.",
     "",
-    "Respond ONLY with valid JSON.",
-    'Example: {"partOfSpeech":"noun","categories":["Food"]}',
+    'Required format: {"partOfSpeech":"noun","categories":["Food"]}',
   ].join("\n");
 
   const res = await fetch("/api/groq", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-    model: "openai/gpt-oss-20b",
-    max_completion_tokens: 300,
-    temperature: 0.2,
-    messages: [{ role: "user", content: prompt }],
-  }),
+      model: "openai/gpt-oss-20b",
+      max_completion_tokens: 300,
+      temperature: 0.2,
+      messages: [{ role: "user", content: prompt }],
+    }),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error((err.error && err.error.message) || `HTTP ${res.status}`);
+    throw new Error(
+      (err.error && err.error.message) || `HTTP ${res.status}`
+    );
   }
 
   const data = await res.json();
   const text = data?.choices?.[0]?.message?.content || "";
-  const clean = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+
+  console.log("AI raw response:", text);
+
+  let clean = text
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  // If the model added extra text, extract the JSON object.
+  const jsonStart = clean.indexOf("{");
+  const jsonEnd = clean.lastIndexOf("}");
+
+  if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+    clean = clean.slice(jsonStart, jsonEnd + 1);
+  }
 
   let parsed;
+
   try {
     parsed = JSON.parse(clean);
   } catch (error) {
-    console.error("AI returned invalid JSON:", text);
+    console.error("AI returned invalid JSON.");
+    console.error("Raw response:", text);
+    console.error("Cleaned response:", clean);
     throw new Error("AI returned invalid JSON.");
   }
 
-  const validCategories = (Array.isArray(parsed.categories) ? parsed.categories : [])
+  const validPartOfSpeech = [
+    "noun",
+    "verb",
+    "adjective",
+    "adverb",
+    "pronoun",
+    "expression",
+    "phrase",
+  ];
+
+  const partOfSpeech = validPartOfSpeech.includes(parsed.partOfSpeech)
+    ? parsed.partOfSpeech
+    : "";
+
+  const validCategories = (
+    Array.isArray(parsed.categories) ? parsed.categories : []
+  )
     .map((category) => {
       const normalized = String(category).trim().toLowerCase();
+
       return ALL_CATEGORIES.find(
         (validCategory) => validCategory.toLowerCase() === normalized
       );
@@ -289,7 +333,8 @@ export async function aiEnrich(romanized, english) {
     .filter(Boolean);
 
   return {
-    partOfSpeech: parsed.partOfSpeech || "",
-    categories: [...new Set(validCategories)],
+    partOfSpeech,
+    categories: [...new Set(validCategories)].slice(0, 3),
   };
 }
+
