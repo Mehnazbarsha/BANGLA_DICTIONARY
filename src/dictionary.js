@@ -59,12 +59,7 @@ export const ALL_CATEGORIES = [
 
 export const CATEGORY_COLORS = {
   "Greetings":             { bg: "#fbefd7", border: "#e8d4a0", text: "#3a2e10", tag: "#e8d4a0" },
-  "Emotions": { 
-  bg: "#F6C878", 
-  border: "#D99F3D", 
-  text: "#3A2208", 
-  tag: "#D99F3D" 
-},
+  "Emotions":              { bg: "#F6C878", border: "#D99F3D", text: "#3A2208", tag: "#D99F3D" },
   "Relationships":         { bg: "#f7df99", border: "#d8c060", text: "#3a3008", tag: "#d8c060" },
   "Family":                { bg: "#f0b2a3", border: "#d08070", text: "#3a1810", tag: "#d08070" },
   "Food":                  { bg: "#f4cdd3", border: "#d8a0a8", text: "#3a1820", tag: "#d8a0a8" },
