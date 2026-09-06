@@ -98,7 +98,7 @@ function WordCard({ word, expanded, onExpand, onEdit, onDelete, canDelete, isBoo
 function CategoryPicker({ selected, onChange }) {
   return (
     <div className="category-picker-wrapper">
-      <label className="form-label">Categories</label>
+      <label className="form-label">Categories (select all that apply)</label>
       <div className="category-picker">
         {ALL_CATEGORIES.map((c) => {
           const active = selected.includes(c);
@@ -357,20 +357,23 @@ export default function BanglaDictionary() {
           <div>
             <div className="form-eyebrow">
               <span>{editId ? "Editing entry" : "New entry"}</span>
-              <span>
-                {aiLoading && <span className="ai-status loading">generating...</span>}
-                {aiStatus === "ok" && <span className="ai-status ok">✓ filled by AI</span>}
-                {aiStatus === "err" && <span className="ai-status err">⚠ AI failed</span>}
+              <span className={`ai-status${aiLoading ? " loading" : aiStatus === "ok" ? " ok" : aiStatus === "err" ? " err" : " idle"}`}>
+                {aiLoading ? "generating..." : aiStatus === "ok" ? "✓ filled by AI" : aiStatus === "err" ? "⚠ AI failed" : "—"}
               </span>
             </div>
 
             <div className="form-panel" style={{ background: formCc.bg, borderColor: formCc.border }}>
               <div className="form-card-top">
-                {form.partOfSpeech && (
-                  <span className="part-of-speech" style={{ background: formCc.tag, color: formCc.text }}>
-                    {form.partOfSpeech}
-                  </span>
-                )}
+                <span
+                  className="part-of-speech"
+                  style={{
+                    background: formCc.tag,
+                    color: formCc.text,
+                    visibility: form.partOfSpeech ? "visible" : "hidden",
+                  }}
+                >
+                  {form.partOfSpeech || "—"}
+                </span>
               </div>
 
               <div className="form-fields-row">
@@ -379,14 +382,14 @@ export default function BanglaDictionary() {
                   style={{ color: formCc.text, borderColor: formCc.border }}
                   value={form.romanized}
                   onChange={(e) => setForm((f) => ({ ...f, romanized: e.target.value }))}
-                  placeholder="Romanized Bangla"
+                  placeholder="Romanized Bangla *"
                 />
                 <input
                   className="form-card-input form-card-english"
                   style={{ color: formCc.text, borderColor: formCc.border }}
                   value={form.english}
                   onChange={(e) => setForm((f) => ({ ...f, english: e.target.value }))}
-                  placeholder="English meaning"
+                  placeholder="English meaning *"
                 />
                 <input
                   className="form-card-input form-card-pos"
