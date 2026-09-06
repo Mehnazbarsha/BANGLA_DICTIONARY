@@ -21,6 +21,8 @@ import {
 
 const ADMIN_EMAIL = "barshamehnaz@gmail.com";
 
+const DEFAULT_FORM_CC = { bg: "#f5f0eb", border: "#cfc7c1", text: "#211d1c", tag: "#e5dfdb" };
+
 // ── CATEGORY TAGS ──────────────────────────────────────────────
 
 function CategoryTags({ categories }) {
@@ -81,9 +83,6 @@ function WordCard({ word, expanded, onExpand, onEdit, onDelete, canDelete, isBoo
           style={{ borderColor: cc.border }}
           onClick={(e) => e.stopPropagation()}
         >
-          {word.example && (
-            <div className="word-example" style={{ color: cc.text }}>{word.example}</div>
-          )}
           <div className="word-actions">
             <button className="btn-small" onClick={onEdit}>edit</button>
             {canDelete && <button className="btn-danger" onClick={onDelete}>delete</button>}
@@ -99,7 +98,7 @@ function WordCard({ word, expanded, onExpand, onEdit, onDelete, canDelete, isBoo
 function CategoryPicker({ selected, onChange }) {
   return (
     <div className="category-picker-wrapper">
-      <label className="form-label">Categories (select all that apply)</label>
+      <label className="form-label">Categories</label>
       <div className="category-picker">
         {ALL_CATEGORIES.map((c) => {
           const active = selected.includes(c);
@@ -141,6 +140,10 @@ export default function BanglaDictionary() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState("");
   const debounceRef = useRef(null);
+
+  const formCc = form.categories && form.categories[0]
+    ? getCategoryColor(form.categories[0])
+    : DEFAULT_FORM_CC;
 
   // ── SCROLL HERO ──
   useEffect(() => {
@@ -195,19 +198,23 @@ export default function BanglaDictionary() {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async (ev) => {
+    reader.onload = (ev) => {
       const img = new Image();
       img.onload = async () => {
-        const canvas = document.createElement("canvas");
-        const MAX = 120;
-        const ratio = Math.min(MAX / img.width, MAX / img.height);
-        canvas.width = img.width * ratio;
-        canvas.height = img.height * ratio;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const compressed = canvas.toDataURL("image/jpeg", 0.7);
-        await setDoc(doc(db, "users", user.uid, "profile", "data"), { avatar: compressed }, { merge: true });
-        setShowUserMenu(false);
+        try {
+          const canvas = document.createElement("canvas");
+          const MAX = 120;
+          const ratio = Math.min(MAX / img.width, MAX / img.height);
+          canvas.width = img.width * ratio;
+          canvas.height = img.height * ratio;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const compressed = canvas.toDataURL("image/jpeg", 0.7);
+          await setDoc(doc(db, "users", user.uid, "profile", "data"), { avatar: compressed }, { merge: true });
+          setShowUserMenu(false);
+        } catch (err) {
+          console.error("Avatar upload failed:", err);
+        }
       };
       img.src = ev.target.result;
     };
@@ -255,7 +262,8 @@ export default function BanglaDictionary() {
   }
 
   function handleEdit(word) {
-    setForm({ ...word, categories: word.categories || [] });
+    const { example, ...rest } = word;
+    setForm({ ...rest, categories: word.categories || [] });
     setEditId(word.id); setAiStatus(""); setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -274,20 +282,6 @@ export default function BanglaDictionary() {
     await signOut(auth);
     setIsAdmin(false);
     setShowUserMenu(false);
-  }
-
-  function field(key, label, placeholder) {
-    return (
-      <div className="form-field">
-        <label className="form-label">{label}</label>
-        <input
-          className="form-input"
-          value={form[key]}
-          onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-          placeholder={placeholder}
-        />
-      </div>
-    );
   }
 
   return (
@@ -360,30 +354,60 @@ export default function BanglaDictionary() {
 
       <main className="main">
         {showForm && (
-          <div className="form-panel">
-            <div className="form-header">
-              <span className="form-section-label">
-                {editId ? "— edit entry" : "— new entry"}
+          <div>
+            <div className="form-eyebrow">
+              <span>{editId ? "Editing entry" : "New entry"}</span>
+              <span>
+                {aiLoading && <span className="ai-status loading">generating...</span>}
+                {aiStatus === "ok" && <span className="ai-status ok">✓ filled by AI</span>}
+                {aiStatus === "err" && <span className="ai-status err">⚠ AI failed</span>}
               </span>
-              {aiLoading && <span className="ai-status loading">generating...</span>}
-              {aiStatus === "ok" && <span className="ai-status ok">✓ filled by AI</span>}
-              {aiStatus === "err" && <span className="ai-status err">⚠ AI failed</span>}
             </div>
-            <div className="form-grid">
-              {field("romanized", "Romanized Bangla *", "e.g. bhalobasha")}
-              {field("english", "English Meaning *", "e.g. love")}
-              {field("partOfSpeech", "Part of Speech", "—")}
-            </div>
-            {field("example", "Example sentence", "Write your own example...")}
-            <CategoryPicker
-              selected={form.categories || []}
-              onChange={(cats) => setForm((f) => ({ ...f, categories: cats }))}
-            />
-            <div className="form-actions">
-              <button className="btn-primary" onClick={handleSubmit}>
-                {editId ? "save changes" : "add to dictionary"}
-              </button>
-              <button className="btn-ghost" onClick={closeForm}>cancel</button>
+
+            <div className="form-panel" style={{ background: formCc.bg, borderColor: formCc.border }}>
+              <div className="form-card-top">
+                {form.partOfSpeech && (
+                  <span className="part-of-speech" style={{ background: formCc.tag, color: formCc.text }}>
+                    {form.partOfSpeech}
+                  </span>
+                )}
+              </div>
+
+              <div className="form-fields-row">
+                <input
+                  className="form-card-input form-card-romanized"
+                  style={{ color: formCc.text, borderColor: formCc.border }}
+                  value={form.romanized}
+                  onChange={(e) => setForm((f) => ({ ...f, romanized: e.target.value }))}
+                  placeholder="Romanized Bangla"
+                />
+                <input
+                  className="form-card-input form-card-english"
+                  style={{ color: formCc.text, borderColor: formCc.border }}
+                  value={form.english}
+                  onChange={(e) => setForm((f) => ({ ...f, english: e.target.value }))}
+                  placeholder="English meaning"
+                />
+                <input
+                  className="form-card-input form-card-pos"
+                  style={{ color: formCc.text, borderColor: formCc.border }}
+                  value={form.partOfSpeech}
+                  onChange={(e) => setForm((f) => ({ ...f, partOfSpeech: e.target.value }))}
+                  placeholder="Part of speech"
+                />
+              </div>
+
+              <CategoryPicker
+                selected={form.categories || []}
+                onChange={(cats) => setForm((f) => ({ ...f, categories: cats }))}
+              />
+
+              <div className="form-actions">
+                <button className="btn-primary" onClick={handleSubmit}>
+                  {editId ? "save changes" : "add to dictionary"}
+                </button>
+                <button className="btn-ghost" onClick={closeForm}>cancel</button>
+              </div>
             </div>
           </div>
         )}
@@ -455,9 +479,6 @@ export default function BanglaDictionary() {
                     )}
                   </div>
                 </div>
-                {expandedId === w.id && w.example && (
-                  <div className="list-expanded">"{w.example}"</div>
-                )}
               </div>
             ))}
           </div>

@@ -18,7 +18,6 @@ export const EMPTY_FORM = {
   romanized: "",
   english: "",
   partOfSpeech: "",
-  example: "",
   categories: [],
 };
 
@@ -332,4 +331,3 @@ export async function aiEnrich(romanized, english) {
     categories: [...new Set(validCategories)].slice(0, 3),
   };
 }
-
