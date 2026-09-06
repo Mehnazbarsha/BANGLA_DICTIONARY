@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { auth } from "./firebase.js";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
   GoogleAuthProvider,
 } from "firebase/auth";
 
@@ -17,10 +15,6 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    getRedirectResult(auth).catch((e) => setError(e.message));
-  }, []);
 
   async function handleEmail() {
     if (!email || !password) return;
@@ -41,12 +35,7 @@ export default function AuthPage() {
   async function handleGoogle() {
     setError("");
     try {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        await signInWithRedirect(auth, provider);
-      } else {
-        await signInWithPopup(auth, provider);
-      }
+      await signInWithPopup(auth, provider);
     } catch (e) {
       setError(e.message);
     }
