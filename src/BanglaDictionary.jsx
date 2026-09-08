@@ -25,13 +25,6 @@ import {
 
 const ADMIN_EMAIL = "barshamehnaz@gmail.com";
 
-const DEFAULT_FORM_CC = {
-  bg: "#f5f0eb",
-  border: "#cfc7c1",
-  text: "#211d1c",
-  tag: "#e5dfdb",
-};
-
 // ── CATEGORY TAGS ──────────────────────────────────────────────
 
 function CategoryTags({ categories }) {
@@ -147,6 +140,15 @@ function WordCard({
           style={{ borderColor: cc.border }}
           onClick={(e) => e.stopPropagation()}
         >
+          {word.example && (
+            <div
+              className="word-example"
+              style={{ color: cc.text }}
+            >
+              {word.example}
+            </div>
+          )}
+
           <div className="word-actions">
             <button
               className="btn-small"
@@ -194,7 +196,9 @@ function CategoryPicker({ selected, onChange }) {
               onClick={() =>
                 onChange(
                   active
-                    ? selected.filter((x) => x !== c)
+                    ? selected.filter(
+                        (x) => x !== c
+                      )
                     : [...selected, c]
                 )
               }
@@ -223,25 +227,25 @@ export default function BanglaDictionary() {
   const [words, setWords] = useState([]);
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [bookmarks, setBookmarks] = useState(new Set());
+  const [showUserMenu, setShowUserMenu] =
+    useState(false);
+  const [bookmarks, setBookmarks] = useState(
+    new Set()
+  );
   const [profile, setProfile] = useState(null);
-  const [heroCollapsed, setHeroCollapsed] = useState(false);
+  const [heroCollapsed, setHeroCollapsed] =
+    useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [search, setSearch] = useState("");
-  const [filterCategory, setFilterCategory] = useState("All");
+  const [filterCategory, setFilterCategory] =
+    useState("All");
   const [view, setView] = useState("grid");
   const [expandedId, setExpandedId] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState("");
   const debounceRef = useRef(null);
-
-  const formCc =
-    form.categories && form.categories[0]
-      ? getCategoryColor(form.categories[0])
-      : DEFAULT_FORM_CC;
 
   // ── SCROLL HERO ──
 
@@ -249,21 +253,32 @@ export default function BanglaDictionary() {
     const handleScroll = () =>
       setHeroCollapsed(window.scrollY > 80);
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener(
+      "scroll",
+      handleScroll
+    );
 
     return () =>
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener(
+        "scroll",
+        handleScroll
+      );
   }, []);
 
   // ── AUTH ──
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (u) {
-        setUser(u);
-        setIsAdmin(u.email === ADMIN_EMAIL);
+    const unsub = onAuthStateChanged(
+      auth,
+      (u) => {
+        if (u) {
+          setUser(u);
+          setIsAdmin(
+            u.email === ADMIN_EMAIL
+          );
+        }
       }
-    });
+    );
 
     return unsub;
   }, []);
@@ -271,7 +286,10 @@ export default function BanglaDictionary() {
   // ── WORDS ──
 
   useEffect(() => {
-    const unsub = subscribeToWords((w) => setWords(w));
+    const unsub = subscribeToWords((w) =>
+      setWords(w)
+    );
+
     return unsub;
   }, []);
 
@@ -281,10 +299,17 @@ export default function BanglaDictionary() {
     if (!user) return;
 
     const unsub = onSnapshot(
-      collection(db, "users", user.uid, "bookmarks"),
+      collection(
+        db,
+        "users",
+        user.uid,
+        "bookmarks"
+      ),
       (snap) => {
         setBookmarks(
-          new Set(snap.docs.map((d) => d.id))
+          new Set(
+            snap.docs.map((d) => d.id)
+          )
         );
       }
     );
@@ -298,10 +323,18 @@ export default function BanglaDictionary() {
     if (!user) return;
 
     const unsub = onSnapshot(
-      doc(db, "users", user.uid, "profile", "data"),
+      doc(
+        db,
+        "users",
+        user.uid,
+        "profile",
+        "data"
+      ),
       (snap) => {
         setProfile(
-          snap.exists() ? snap.data() : null
+          snap.exists()
+            ? snap.data()
+            : null
         );
       }
     );
@@ -309,7 +342,7 @@ export default function BanglaDictionary() {
     return unsub;
   }, [user]);
 
-  // ── BOOKMARK TOGGLE ──
+  // ── BOOKMARK ──
 
   async function toggleBookmark(wordId) {
     if (!user) return;
@@ -340,60 +373,59 @@ export default function BanglaDictionary() {
 
     const reader = new FileReader();
 
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const img = new Image();
 
       img.onload = async () => {
-        try {
-          const canvas =
-            document.createElement("canvas");
+        const canvas =
+          document.createElement("canvas");
 
-          const MAX = 120;
+        const MAX = 120;
 
-          const ratio = Math.min(
-            MAX / img.width,
-            MAX / img.height
+        const ratio = Math.min(
+          MAX / img.width,
+          MAX / img.height
+        );
+
+        canvas.width =
+          img.width * ratio;
+
+        canvas.height =
+          img.height * ratio;
+
+        const ctx = canvas.getContext("2d");
+
+        ctx.drawImage(
+          img,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+
+        const compressed =
+          canvas.toDataURL(
+            "image/jpeg",
+            0.7
           );
 
-          canvas.width = img.width * ratio;
-          canvas.height = img.height * ratio;
+        await setDoc(
+          doc(
+            db,
+            "users",
+            user.uid,
+            "profile",
+            "data"
+          ),
+          {
+            avatar: compressed,
+          },
+          {
+            merge: true,
+          }
+        );
 
-          const ctx = canvas.getContext("2d");
-
-          ctx.drawImage(
-            img,
-            0,
-            0,
-            canvas.width,
-            canvas.height
-          );
-
-          const compressed =
-            canvas.toDataURL("image/jpeg", 0.7);
-
-          await setDoc(
-            doc(
-              db,
-              "users",
-              user.uid,
-              "profile",
-              "data"
-            ),
-            {
-              avatar: compressed,
-            },
-            {
-              merge: true,
-            }
-          );
-
-          setShowUserMenu(false);
-        } catch (err) {
-          console.error(
-            "Avatar upload failed:",
-            err
-          );
-        }
+        setShowUserMenu(false);
       };
 
       img.src = ev.target.result;
@@ -449,8 +481,8 @@ export default function BanglaDictionary() {
       clearTimeout(debounceRef.current);
     }
 
-    debounceRef.current = setTimeout(
-      async () => {
+    debounceRef.current =
+      setTimeout(async () => {
         setAiLoading(true);
         setAiStatus("loading");
 
@@ -483,9 +515,7 @@ export default function BanglaDictionary() {
           () => setAiStatus(""),
           3000
         );
-      },
-      900
-    );
+      }, 900);
 
     return () =>
       clearTimeout(debounceRef.current);
@@ -519,20 +549,25 @@ export default function BanglaDictionary() {
     }
 
     if (editId !== null) {
-      await updateWord(editId, form);
+      await updateWord(
+        editId,
+        form
+      );
     } else {
-      await addWord(form, user);
+      await addWord(
+        form,
+        user
+      );
     }
 
     closeForm();
   }
 
   function handleEdit(word) {
-    const { example, ...rest } = word;
-
     setForm({
-      ...rest,
-      categories: word.categories || [],
+      ...word,
+      categories:
+        word.categories || [],
     });
 
     setEditId(word.id);
@@ -564,8 +599,36 @@ export default function BanglaDictionary() {
 
   async function handleSignOut() {
     await signOut(auth);
+
     setIsAdmin(false);
     setShowUserMenu(false);
+  }
+
+  function field(
+    key,
+    label,
+    placeholder
+  ) {
+    return (
+      <div className="form-field">
+        <label className="form-label">
+          {label}
+        </label>
+
+        <input
+          className="form-input"
+          value={form[key]}
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              [key]:
+                e.target.value,
+            }))
+          }
+          placeholder={placeholder}
+        />
+      </div>
+    );
   }
 
   // ── RENDER ──
@@ -580,7 +643,8 @@ export default function BanglaDictionary() {
             </div>
 
             <div className="header-sub">
-              Bangla Dictionary · {words.length}{" "}
+              Bangla Dictionary ·{" "}
+              {words.length}{" "}
               {words.length === 1
                 ? "entry"
                 : "entries"}
@@ -611,53 +675,75 @@ export default function BanglaDictionary() {
             )}
 
             <div className="user-menu-wrapper">
-              <div
-                className="user-avatar"
+              <button
+                className={`user-avatar${
+                  showUserMenu
+                    ? " active"
+                    : ""
+                }`}
                 onClick={() =>
-                  setShowUserMenu((v) => !v)
+                  setShowUserMenu(
+                    (v) => !v
+                  )
+                }
+                aria-label="Open account menu"
+                aria-expanded={
+                  showUserMenu
                 }
                 style={{
                   backgroundImage:
                     profile?.avatar
                       ? `url(${profile.avatar})`
                       : "none",
-                  backgroundSize: "cover",
+                  backgroundSize:
+                    "cover",
                   backgroundPosition:
                     "center",
                 }}
               >
                 {!profile?.avatar &&
-                  (user?.email?.[0].toUpperCase() ||
-                    "?")}
-              </div>
+                  (
+                    user?.email?.[0] ||
+                    "?"
+                  ).toUpperCase()}
+              </button>
 
               {showUserMenu && (
                 <div className="user-menu">
-                  <div className="user-menu-heading">
-                    <span className="user-menu-kicker">
-                      Account
-                    </span>
-
-                    <span className="user-menu-mark">
-                      m
-                    </span>
-                  </div>
-
-                  <div className="user-email">
-                    {user?.email}
-                  </div>
-
+                  {/* Admin status comes first */}
                   {isAdmin && (
                     <div className="user-admin">
-                      <span className="admin-dot" />
-                      administrator
+                      <span className="admin-status-dot" />
+                      <span>
+                        Administrator
+                      </span>
                     </div>
                   )}
 
-                  <label className="upload-photo-button">
-                    <span>upload photo</span>
+                  {/* Account information */}
+                  <div className="account-row">
+                    <span className="account-label">
+                      Account
+                    </span>
 
-                    <i className="ti ti-camera" />
+                    <span
+                      className="user-email"
+                      title={user?.email}
+                    >
+                      {user?.email}
+                    </span>
+                  </div>
+
+                  {/* Account action */}
+                  <label className="user-menu-action">
+                    <span className="user-menu-action-left">
+                      <i className="ti ti-camera" />
+                      <span>
+                        Upload photo
+                      </span>
+                    </span>
+
+                    <i className="ti ti-chevron-right action-chevron" />
 
                     <input
                       type="file"
@@ -671,12 +757,21 @@ export default function BanglaDictionary() {
                     />
                   </label>
 
+                  {/* Destructive action */}
+                  <div className="user-menu-divider" />
+
                   <button
                     className="sign-out-button"
                     onClick={handleSignOut}
                   >
-                    <span>sign out</span>
-                    <i className="ti ti-arrow-up-right" />
+                    <span className="user-menu-action-left">
+                      <i className="ti ti-logout" />
+                      <span>
+                        Sign out
+                      </span>
+                    </span>
+
+                    <i className="ti ti-chevron-right action-chevron" />
                   </button>
                 </div>
               )}
@@ -687,7 +782,9 @@ export default function BanglaDictionary() {
 
       <div
         className={`hero${
-          heroCollapsed ? " collapsed" : ""
+          heroCollapsed
+            ? " collapsed"
+            : ""
         }`}
       >
         <h1 className="hero-heading">
@@ -697,147 +794,94 @@ export default function BanglaDictionary() {
         </h1>
 
         <p className="hero-sub">
-          Explore Bangla words, their meanings,
-          and categories
+          Explore Bangla words, their
+          meanings, and categories
         </p>
       </div>
 
       <main className="main">
         {showForm && (
-          <div>
-            <div className="form-eyebrow">
-              <span>
+          <div className="form-panel">
+            <div className="form-header">
+              <span className="form-section-label">
                 {editId
-                  ? "Editing entry"
-                  : "New entry"}
+                  ? "— edit entry"
+                  : "— new entry"}
               </span>
 
-              <span
-                className={`ai-status${
-                  aiLoading
-                    ? " loading"
-                    : aiStatus === "ok"
-                    ? " ok"
-                    : aiStatus === "err"
-                    ? " err"
-                    : " idle"
-                }`}
-              >
-                {aiLoading
-                  ? "generating..."
-                  : aiStatus === "ok"
-                  ? "✓ filled by AI"
-                  : aiStatus === "err"
-                  ? "⚠ AI failed"
-                  : "—"}
-              </span>
+              {aiLoading && (
+                <span className="ai-status loading">
+                  generating...
+                </span>
+              )}
+
+              {aiStatus === "ok" && (
+                <span className="ai-status ok">
+                  ✓ filled by AI
+                </span>
+              )}
+
+              {aiStatus === "err" && (
+                <span className="ai-status err">
+                  ⚠ AI failed
+                </span>
+              )}
             </div>
 
-            <div
-              className="form-panel"
-              style={{
-                background: formCc.bg,
-                borderColor: formCc.border,
-              }}
-            >
-              <div className="form-card-top">
-                <span
-                  className="part-of-speech"
-                  style={{
-                    background: formCc.tag,
-                    color: formCc.text,
-                    visibility:
-                      form.partOfSpeech
-                        ? "visible"
-                        : "hidden",
-                  }}
-                >
-                  {form.partOfSpeech || "—"}
-                </span>
-              </div>
+            <div className="form-grid">
+              {field(
+                "romanized",
+                "Romanized Bangla *",
+                "e.g. bhalobasha"
+              )}
 
-              <div className="form-fields-row">
-                <input
-                  className="form-card-input form-card-romanized"
-                  style={{
-                    color: formCc.text,
-                    borderColor: formCc.border,
-                  }}
-                  value={form.romanized}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      romanized:
-                        e.target.value,
-                    }))
-                  }
-                  placeholder="Romanized Bangla *"
-                />
+              {field(
+                "english",
+                "English Meaning *",
+                "e.g. love"
+              )}
 
-                <input
-                  className="form-card-input form-card-english"
-                  style={{
-                    color: formCc.text,
-                    borderColor: formCc.border,
-                  }}
-                  value={form.english}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      english:
-                        e.target.value,
-                    }))
-                  }
-                  placeholder="English meaning *"
-                />
+              {field(
+                "partOfSpeech",
+                "Part of Speech",
+                "—"
+              )}
+            </div>
 
-                <input
-                  className="form-card-input form-card-pos"
-                  style={{
-                    color: formCc.text,
-                    borderColor: formCc.border,
-                  }}
-                  value={form.partOfSpeech}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      partOfSpeech:
-                        e.target.value,
-                    }))
-                  }
-                  placeholder="Part of speech"
-                />
-              </div>
+            {field(
+              "example",
+              "Example sentence",
+              "Write your own example..."
+            )}
 
-              <CategoryPicker
-                selected={
-                  form.categories || []
-                }
-                onChange={(cats) =>
-                  setForm((f) => ({
-                    ...f,
-                    categories: cats,
-                  }))
-                }
-              />
+            <CategoryPicker
+              selected={
+                form.categories || []
+              }
+              onChange={(cats) =>
+                setForm((f) => ({
+                  ...f,
+                  categories: cats,
+                }))
+              }
+            />
 
-              <div className="form-actions">
-                <button
-                  className="btn-primary"
-                  onClick={handleSubmit}
-                >
-                  {editId
-                    ? "save changes"
-                    : "add to dictionary"}
-                </button>
+            <div className="form-actions">
+              <button
+                className="btn-primary"
+                onClick={handleSubmit}
+              >
+                {editId
+                  ? "save changes"
+                  : "add to dictionary"}
+              </button>
 
-                <button
-                  className="btn-ghost"
-                  onClick={closeForm}
-                >
-                  cancel
-                </button>
-              </div>
+              <button
+                className="btn-ghost"
+                onClick={closeForm}
+              >
+                cancel
+              </button>
             </div>
           </div>
         )}
@@ -848,7 +892,9 @@ export default function BanglaDictionary() {
               className="search-input"
               value={search}
               onChange={(e) =>
-                setSearch(e.target.value)
+                setSearch(
+                  e.target.value
+                )
               }
               placeholder="Search romanized or english words"
             />
@@ -864,9 +910,13 @@ export default function BanglaDictionary() {
             >
               <option>All</option>
 
-              {allCategories.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
+              {allCategories.map(
+                (c) => (
+                  <option key={c}>
+                    {c}
+                  </option>
+                )
+              )}
             </select>
 
             <div className="view-toggle">
@@ -879,7 +929,9 @@ export default function BanglaDictionary() {
                 <button
                   key={v}
                   className={`view-btn${
-                    view === v ? " active" : ""
+                    view === v
+                      ? " active"
+                      : ""
                   }`}
                   onClick={() =>
                     setView(v)
@@ -934,10 +986,20 @@ export default function BanglaDictionary() {
         {view === "list" && (
           <div>
             <div className="list-header">
-              <span>Romanized</span>
+              <span>
+                Romanized
+              </span>
+
               <span>English</span>
-              <span>Categories</span>
-              <span>Part of Speech</span>
+
+              <span>
+                Categories
+              </span>
+
+              <span>
+                Part of Speech
+              </span>
+
               <span></span>
             </div>
 
@@ -974,7 +1036,8 @@ export default function BanglaDictionary() {
                   </span>
 
                   <span className="list-pos">
-                    {w.partOfSpeech || "—"}
+                    {w.partOfSpeech ||
+                      "—"}
                   </span>
 
                   <div
@@ -996,7 +1059,9 @@ export default function BanglaDictionary() {
                       <button
                         className="btn-danger"
                         onClick={() =>
-                          handleDelete(w.id)
+                          handleDelete(
+                            w.id
+                          )
                         }
                       >
                         del
@@ -1004,6 +1069,13 @@ export default function BanglaDictionary() {
                     )}
                   </div>
                 </div>
+
+                {expandedId === w.id &&
+                  w.example && (
+                    <div className="list-expanded">
+                      "{w.example}"
+                    </div>
+                  )}
               </div>
             ))}
           </div>
@@ -1013,74 +1085,83 @@ export default function BanglaDictionary() {
           <div className="themes-view">
             {Object.entries(grouped)
               .sort()
-              .map(([category, cw]) => {
-                const cc =
-                  getCategoryColor(
-                    category
-                  );
+              .map(
+                ([
+                  category,
+                  cw,
+                ]) => {
+                  const cc =
+                    getCategoryColor(
+                      category
+                    );
 
-                return (
-                  <div key={category}>
-                    <div className="theme-section-header">
-                      <div
-                        className="theme-dot"
-                        style={{
-                          background:
-                            cc.border,
-                        }}
-                      />
-
-                      <span className="theme-section-name">
-                        {category}
-                      </span>
-
-                      <div className="theme-divider" />
-
-                      <span className="theme-count">
-                        {cw.length}
-                      </span>
-                    </div>
-
-                    <div className="grid-view">
-                      {cw.map((w) => (
-                        <WordCard
-                          key={w.id}
-                          word={w}
-                          expanded={
-                            expandedId ===
-                            w.id
-                          }
-                          onExpand={() =>
-                            setExpandedId(
-                              expandedId ===
-                                w.id
-                                ? null
-                                : w.id
-                            )
-                          }
-                          onEdit={() =>
-                            handleEdit(w)
-                          }
-                          onDelete={() =>
-                            handleDelete(w.id)
-                          }
-                          canDelete={canDelete(
-                            w
-                          )}
-                          isBookmarked={bookmarks.has(
-                            w.id
-                          )}
-                          onBookmark={() =>
-                            toggleBookmark(
-                              w.id
-                            )
-                          }
+                  return (
+                    <div
+                      key={category}
+                    >
+                      <div className="theme-section-header">
+                        <div
+                          className="theme-dot"
+                          style={{
+                            background:
+                              cc.border,
+                          }}
                         />
-                      ))}
+
+                        <span className="theme-section-name">
+                          {category}
+                        </span>
+
+                        <div className="theme-divider" />
+
+                        <span className="theme-count">
+                          {cw.length}
+                        </span>
+                      </div>
+
+                      <div className="grid-view">
+                        {cw.map((w) => (
+                          <WordCard
+                            key={w.id}
+                            word={w}
+                            expanded={
+                              expandedId ===
+                              w.id
+                            }
+                            onExpand={() =>
+                              setExpandedId(
+                                expandedId ===
+                                  w.id
+                                  ? null
+                                  : w.id
+                              )
+                            }
+                            onEdit={() =>
+                              handleEdit(w)
+                            }
+                            onDelete={() =>
+                              handleDelete(
+                                w.id
+                              )
+                            }
+                            canDelete={canDelete(
+                              w
+                            )}
+                            isBookmarked={bookmarks.has(
+                              w.id
+                            )}
+                            onBookmark={() =>
+                              toggleBookmark(
+                                w.id
+                              )
+                            }
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                }
+              )}
           </div>
         )}
 
@@ -1107,7 +1188,8 @@ export default function BanglaDictionary() {
               </div>
 
               <div className="empty-text">
-                No entries match your search
+                No entries match your
+                search
               </div>
             </div>
           )}
