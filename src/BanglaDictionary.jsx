@@ -25,6 +25,8 @@ import {
 
 const ADMIN_EMAIL = "barshamehnaz@gmail.com";
 
+const DEFAULT_FORM_CC = { bg: "#f5f0eb", border: "#cfc7c1", text: "#211d1c", tag: "#e5dfdb" };
+
 // ── CATEGORY TAGS ──────────────────────────────────────────────
 
 function CategoryTags({ categories }) {
@@ -174,10 +176,10 @@ function WordCard({
 
 // ── CATEGORY PICKER ────────────────────────────────────────────
 
-function CategoryPicker({ selected, onChange }) {
+function CategoryPicker({ selected, onChange, labelColor }) {
   return (
     <div className="category-picker-wrapper">
-      <label className="form-label">
+      <label className="form-label" style={labelColor ? { color: labelColor } : undefined}>
         Categories (select all that apply)
       </label>
 
@@ -246,6 +248,10 @@ export default function BanglaDictionary() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState("");
   const debounceRef = useRef(null);
+
+  const formCc = form.categories && form.categories[0]
+    ? getCategoryColor(form.categories[0])
+    : DEFAULT_FORM_CC;
 
   // ── SCROLL HERO ──
 
@@ -604,33 +610,6 @@ export default function BanglaDictionary() {
     setShowUserMenu(false);
   }
 
-  function field(
-    key,
-    label,
-    placeholder
-  ) {
-    return (
-      <div className="form-field">
-        <label className="form-label">
-          {label}
-        </label>
-
-        <input
-          className="form-input"
-          value={form[key]}
-          onChange={(e) =>
-            setForm((f) => ({
-              ...f,
-              [key]:
-                e.target.value,
-            }))
-          }
-          placeholder={placeholder}
-        />
-      </div>
-    );
-  }
-
   // ── RENDER ──
 
   return (
@@ -801,87 +780,64 @@ export default function BanglaDictionary() {
 
       <main className="main">
         {showForm && (
-          <div className="form-panel">
-            <div className="form-header">
-              <span className="form-section-label">
-                {editId
-                  ? "— edit entry"
-                  : "— new entry"}
+          <div>
+            <div className="form-eyebrow">
+              <span>{editId ? "Editing entry" : "New entry"}</span>
+              <span className={`ai-status${aiLoading ? " loading" : aiStatus === "ok" ? " ok" : aiStatus === "err" ? " err" : " idle"}`}>
+                {aiLoading ? "generating..." : aiStatus === "ok" ? "✓ filled by AI" : aiStatus === "err" ? "⚠ AI failed" : "—"}
               </span>
-
-              {aiLoading && (
-                <span className="ai-status loading">
-                  generating...
-                </span>
-              )}
-
-              {aiStatus === "ok" && (
-                <span className="ai-status ok">
-                  ✓ filled by AI
-                </span>
-              )}
-
-              {aiStatus === "err" && (
-                <span className="ai-status err">
-                  ⚠ AI failed
-                </span>
-              )}
             </div>
 
-            <div className="form-grid">
-              {field(
-                "romanized",
-                "Romanized Bangla *",
-                "e.g. bhalobasha"
-              )}
+            <div className="form-panel" style={{ background: formCc.bg, borderColor: formCc.border }}>
+              <div className="form-card-top">
+                <span
+                  className="part-of-speech"
+                  style={{
+                    background: formCc.tag,
+                    color: formCc.text,
+                    visibility: form.partOfSpeech ? "visible" : "hidden",
+                  }}
+                >
+                  {form.partOfSpeech || "—"}
+                </span>
+              </div>
 
-              {field(
-                "english",
-                "English Meaning *",
-                "e.g. love"
-              )}
+              <div className="form-fields-row">
+                <input
+                  className="form-card-input form-card-romanized"
+                  style={{ color: formCc.text, borderColor: formCc.border }}
+                  value={form.romanized}
+                  onChange={(e) => setForm((f) => ({ ...f, romanized: e.target.value }))}
+                  placeholder="Romanized Bangla"
+                />
+                <input
+                  className="form-card-input form-card-english"
+                  style={{ color: formCc.text, borderColor: formCc.border }}
+                  value={form.english}
+                  onChange={(e) => setForm((f) => ({ ...f, english: e.target.value }))}
+                  placeholder="English meaning"
+                />
+                <input
+                  className="form-card-input form-card-pos"
+                  style={{ color: formCc.text, borderColor: formCc.border }}
+                  value={form.partOfSpeech}
+                  onChange={(e) => setForm((f) => ({ ...f, partOfSpeech: e.target.value }))}
+                  placeholder="Part of speech"
+                />
+              </div>
 
-              {field(
-                "partOfSpeech",
-                "Part of Speech",
-                "—"
-              )}
-            </div>
+              <CategoryPicker
+                selected={form.categories || []}
+                onChange={(cats) => setForm((f) => ({ ...f, categories: cats }))}
+                labelColor={formCc.text}
+              />
 
-            {field(
-              "example",
-              "Example sentence",
-              "Write your own example..."
-            )}
-
-            <CategoryPicker
-              selected={
-                form.categories || []
-              }
-              onChange={(cats) =>
-                setForm((f) => ({
-                  ...f,
-                  categories: cats,
-                }))
-              }
-            />
-
-            <div className="form-actions">
-              <button
-                className="btn-primary"
-                onClick={handleSubmit}
-              >
-                {editId
-                  ? "save changes"
-                  : "add to dictionary"}
-              </button>
-
-              <button
-                className="btn-ghost"
-                onClick={closeForm}
-              >
-                cancel
-              </button>
+              <div className="form-actions">
+                <button className="btn-primary" onClick={handleSubmit}>
+                  {editId ? "save changes" : "add to dictionary"}
+                </button>
+                <button className="btn-ghost" onClick={closeForm}>cancel</button>
+              </div>
             </div>
           </div>
         )}
