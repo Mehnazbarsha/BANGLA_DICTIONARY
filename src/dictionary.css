@@ -21,6 +21,7 @@
   --accent-warm: #c18b91;
 
   --danger: #b85c62;
+  --accent-indigo: #5a5fd1;
 
   --radius: 7px;
 
@@ -1214,5 +1215,324 @@ button {
 
   .user-email {
     font-size: 0.56rem;
+  }
+}
+/* ============================================================
+   AUTH PAGE
+   ============================================================ */
+
+.auth-page {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.auth-brand {
+  flex: 1 1 50%;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(155deg, #f3ece4 0%, #ecdcd6 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3.5rem;
+}
+
+.auth-brand-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(33, 29, 28, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+  z-index: 0;
+}
+
+.auth-brand-watermark {
+  position: absolute;
+  right: -0.5rem;
+  bottom: -3rem;
+  font-family: "Noto Sans Bengali", var(--serif), serif;
+  font-size: 26rem;
+  line-height: 1;
+  color: rgba(193, 139, 145, 0.14);
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.auth-brand-mark {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.auth-brand-mark .dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent-warm);
+  background: radial-gradient(circle at 35% 30%, rgba(193, 139, 145, 0.4), transparent 70%);
+}
+
+.auth-brand-quote-block {
+  position: relative;
+  z-index: 1;
+  max-width: 480px;
+}
+
+.auth-quote-mark {
+  display: block;
+  font-family: var(--serif);
+  font-size: 4.5rem;
+  line-height: 1;
+  color: var(--accent-warm);
+  opacity: 0.6;
+  margin-bottom: -0.6rem;
+}
+
+.auth-quote {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(2.1rem, 4vw, 3rem);
+  line-height: 1.25;
+  color: var(--text);
+  margin: 0 0 1.4rem;
+}
+
+.auth-quote-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+}
+
+.auth-quote-source::before {
+  content: "";
+  width: 30px;
+  height: 1px;
+  background: var(--text-mid);
+}
+
+.auth-form-side {
+  flex: 1 1 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 3rem 4.5rem;
+}
+
+.auth-form-wrap {
+  width: 100%;
+  max-width: 460px;
+}
+
+.auth-heading {
+  font-family: var(--serif);
+  font-size: 2.5rem;
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.auth-subheading {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin-bottom: 2.4rem;
+}
+
+.auth-google-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.auth-google-btn:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+  transform: translateY(-1px);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 1.7rem 0;
+}
+
+.auth-divider span {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-divider small {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.auth-field {
+  margin-bottom: 1.35rem;
+}
+
+.auth-field-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.45rem;
+}
+
+.auth-label {
+  font-size: 0.78rem;
+  color: var(--text-mid);
+}
+
+.auth-forgot {
+  font-size: 0.75rem;
+  color: var(--text-mid);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-input-wrap {
+  position: relative;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: white;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.auth-input::placeholder {
+  color: var(--text-muted);
+}
+
+.auth-input:focus {
+  border-color: var(--border-strong);
+}
+
+.auth-input.has-toggle {
+  padding-right: 2.6rem;
+}
+
+.auth-toggle-visibility {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  font-size: 1.05rem;
+}
+
+.auth-error {
+  font-size: 0.8rem;
+  color: var(--danger);
+  margin: -0.3rem 0 1.1rem;
+}
+
+.auth-notice {
+  font-size: 0.8rem;
+  color: #718f6d;
+  margin: -0.3rem 0 1.1rem;
+}
+
+.auth-submit-btn {
+  width: 100%;
+  padding: 0.9rem;
+  border: none;
+  border-radius: 9px;
+  background: var(--accent-indigo);
+  color: white;
+  font-family: var(--mono);
+  font-size: 0.92rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 0.4rem;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.auth-submit-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
+.auth-switch {
+  text-align: center;
+  margin-top: 1.8rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.auth-switch button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-mid);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+@media (max-width: 860px) {
+  .auth-page {
+    flex-direction: column;
+  }
+
+  .auth-brand {
+    min-height: 260px;
+    padding: 2rem;
+  }
+
+  .auth-brand-watermark {
+    font-size: 14rem;
+  }
+
+  .auth-quote {
+    font-size: 1.7rem;
+  }
+
+  .auth-form-side {
+    padding: 2rem 1.5rem;
   }
 }
