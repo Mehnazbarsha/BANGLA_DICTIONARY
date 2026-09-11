@@ -48,6 +48,7 @@ export const ALL_CATEGORIES = [
   "Speech",
   "Violence",
   "News & Media",
+  "Traits",
   "Government & Politics",
   "Insults",
 ];
@@ -85,6 +86,7 @@ export const CATEGORY_COLORS = {
   "News & Media":          { bg: "#ffa7c4", border: "#e07098", text: "#3a1028", tag: "#e07098" },
   "Government & Politics": { bg: "#d790b0", border: "#b06090", text: "#301028", tag: "#b06090" },
   "Insults":               { bg: "#c5ebfd", border: "#88c8f0", text: "#102840", tag: "#88c8f0" },
+  "Traits":                { bg: "#FDE1D8", border: "#F2A995", text: "#7D3F38", tag: "#F2A995" },
 };
 
 // ============================================================
