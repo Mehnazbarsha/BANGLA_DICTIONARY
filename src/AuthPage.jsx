@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { auth } from "./firebase.js";
+import { getCategoryColor, subscribeToWords } from "./dictionary.js";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -18,6 +19,23 @@ export default function AuthPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
+  const [homepageWords, setHomepageWords] = useState([]);
+  const [wordIndex, setWordIndex] = useState(0);
+
+  useEffect(() => subscribeToWords(setHomepageWords), []);
+
+  useEffect(() => {
+    if (homepageWords.length < 2) return undefined;
+    const carousel = window.setInterval(() => {
+      setWordIndex((index) => (index + 1) % homepageWords.length);
+    }, 3600);
+    return () => window.clearInterval(carousel);
+  }, [homepageWords.length]);
+
+  const carouselWord = homepageWords.length
+    ? homepageWords[wordIndex % homepageWords.length]
+    : null;
+  const carouselColor = getCategoryColor(carouselWord?.categories?.[0]);
 
   function resetMessages() {
     setError("");
@@ -65,19 +83,36 @@ export default function AuthPage() {
 
   return (
     <div className="auth-page">
-      {/* Left panel — brand / quote */}
       <div className="auth-brand">
-        <div className="auth-brand-pattern" />
-        <span className="auth-brand-watermark" aria-hidden="true">মা</span>
+        <div className="auth-brand-name">Mati</div>
+        {carouselWord && (
+          <div
+            className="auth-word-carousel"
+            aria-live="polite"
+            style={{
+              "--carousel-bg": `${carouselColor.bg}80`,
+              "--carousel-border": `${carouselColor.border}9c`,
+              "--carousel-text": carouselColor.text,
+            }}
+          >
+            <div className="auth-carousel-word" key={carouselWord.id || wordIndex}>
+              <strong>{carouselWord.romanized}</strong>
+              <span>{carouselWord.english}</span>
+            </div>
+          </div>
+        )}
+        <div className="auth-brand-copy">
+          <div className="auth-brand-quote-block">
+            <p className="auth-eyebrow">Mati means soil</p>
+            <h2 className="auth-quote">Where Bangla<br />takes root and grows.</h2>
+            <p className="auth-brand-description">
+              Grow your Bangla, one word at a time.
+            </p>
+          </div>
 
-        
-
-        <div className="auth-brand-quote-block">
-          <p className="auth-quote">Feel the language at its roots.</p>
         </div>
       </div>
 
-      {/* Right panel — form */}
       <div className="auth-form-side">
         <div className="auth-form-wrap">
           <h1 className="auth-heading">
